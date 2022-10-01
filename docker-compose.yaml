@@ -1,77 +1,45 @@
-# A Docker Compose file that launches a minimal Danbooru instance. This is
-# suitable as a quick demo or for personal use, not for public-facing sites.
-#
-# This will start a Danbooru instance running on http://localhost:3000.
-#
-# Usage:
-#
-#  docker-compose up
-#  docker-compose down
-#
-# References:
-#
-# * https://docs.docker.com/get-docker/
-# * https://docs.docker.com/compose/install/
-# * https://docs.docker.com/compose/compose-file/compose-versioning
-# * https://docs.docker.com/compose/release-notes
-
-# Version 3.4 is the latest version that is supported by the version of Docker
-# Compose shipped with Ubuntu 18.04 LTS (version 1.17.4).
 version: "3.4"
 
 services:
   danbooru:
     user: root
-    image: ghcr.io/danbooru/danbooru:production
-    ports:
-      - "3000:3000"
-    environment:
-      - RAILS_ENV=production
-      - RAILS_SERVE_STATIC_FILES=true
-      - PUMA_WORKERS=1
-      - DATABASE_URL=postgresql://danbooru@postgres/danbooru
-      - DANBOORU_REDIS_URL=redis://redis:6379
-      - DANBOORU_IQDB_URL=http://iqdb:5588
-      - DANBOORU_CANONICAL_URL=http://localhost:3000
+    image: danbooru
+    hostname: aibooru.online
+    env_file: .env.local
     volumes:
       - "danbooru-images:/danbooru/public/data"
+      - "./config/danbooru_local_config.rb:/danbooru/config/danbooru_local_config.rb:ro"
     tmpfs:
       - /tmp
     depends_on:
       - postgres
     command: ["bash", "-c", "bin/rails db:prepare && bin/rails db:seed && bin/rails server -b 0.0.0.0"]
+    restart: always
 
   cron:
     user: root
-    image: ghcr.io/danbooru/danbooru:production
-    environment:
-      - RAILS_ENV=production
-      - DATABASE_URL=postgresql://danbooru@postgres/danbooru
-      - DANBOORU_REDIS_URL=redis://redis:6379
-      - DANBOORU_IQDB_URL=http://iqdb:5588
-      - DANBOORU_CANONICAL_URL=http://localhost
+    image: danbooru
+    env_file: .env.local
     depends_on:
       - danbooru
     volumes:
       - "danbooru-images:/danbooru/public/data"
     command: ["bash", "-c", "bin/wait-for-http http://danbooru:3000 5s && bin/rails danbooru:cron"]
+    restart: always
 
   jobs:
     # We need root to write temp upload files in the images directory (/danbooru/public/data)
     user: root
-    image: ghcr.io/danbooru/danbooru:production
-    environment:
-      - RAILS_ENV=production
-      - DATABASE_URL=postgresql://danbooru@postgres/danbooru
-      - DANBOORU_REDIS_URL=redis://redis:6379
-      - DANBOORU_IQDB_URL=http://iqdb:5588
-      - DANBOORU_CANONICAL_URL=http://localhost
+    image: danbooru
+    hostname: aibooru.online
+    env_file: .env.local
     depends_on:
       - danbooru
     volumes:
       # We need access to images so we can add/remove images to IQDB.
       - "danbooru-images:/danbooru/public/data"
     command: ["bash", "-c", "bin/wait-for-http http://danbooru:3000 5s && bin/good_job start"]
+    restart: always
 
   # https://github.com/danbooru/iqdb
   # https://hub.docker.com/repository/docker/evazion/iqdb
@@ -80,9 +48,11 @@ services:
     volumes:
       - "iqdb-data:/iqdb/data"
     command: ["http", "0.0.0.0", "5588", "/iqdb/data/iqdb.sqlite"]
+    restart: always
 
   redis:
     image: redis
+    restart: always
 
   postgres:
     image: evazion/postgres
@@ -91,6 +61,25 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - "danbooru-data:/var/lib/postgresql/data"
+    restart: always
+
+  nginx:
+    image: lscr.io/linuxserver/swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+      - URL=aibooru.online
+      - VALIDATION=http
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - "danbooru-images:/danbooru-images/data:ro"
+      - ./nginx-config:/config
+    restart: always
 
 volumes:
   danbooru-images:

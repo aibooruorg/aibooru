@@ -11,7 +11,7 @@
 
 module SeoHelper
   def site_description
-    "#{Danbooru.config.canonical_app_name} is the original anime image booru. Search millions of anime pictures categorized by thousands of tags."
+    "#{Danbooru.config.canonical_app_name} is the first booru for AI-generated images. Search for AI-generated anime pictures categorized by thousands of tags."
   end
 
   # https://developers.google.com/search/docs/data-types/video#video-object

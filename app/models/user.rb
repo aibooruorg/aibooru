@@ -74,12 +74,13 @@ class User < ApplicationRecord
   attribute :blacklisted_tags, default: DEFAULT_BLACKLIST
   attribute :time_zone, default: "Eastern Time (US & Canada)"
   attribute :custom_style
+  attribute :sytle_usernames, default: true
   attribute :post_upload_count, default: 0
   attribute :post_update_count, default: 0
   attribute :note_update_count, default: 0
   attribute :unread_dmail_count, default: 0
   attribute :favorite_count, default: 0
-  attribute :per_page, default: 20
+  attribute :per_page, default: Danbooru.config.posts_per_page.to_i
   attribute :theme, default: :auto
   attribute :upload_points, default: Danbooru.config.initial_upload_points.to_i
   attribute :bit_prefs, default: 0
@@ -680,6 +681,7 @@ class User < ApplicationRecord
 
   def initialize_attributes
     self.new_post_navigation_layout = true
+    self.style_usernames = true
   end
 
   def presenter
