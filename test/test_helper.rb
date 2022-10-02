@@ -20,8 +20,6 @@ Rails.application.load_seed
 class ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include FactoryBot::Syntax::Methods
-  extend PostArchiveTestHelper
-  extend PoolArchiveTestHelper
   include ReportbooruHelper
   include AutotaggerHelper
   include DownloadTestHelper
@@ -30,9 +28,6 @@ class ActiveSupport::TestCase
   extend SourceTestHelper
   extend StripeTestHelper
   extend NormalizeAttributeHelper
-
-  mock_post_version_service!
-  mock_pool_version_service!
 
   unless Danbooru.config.debug_mode
     parallelize
