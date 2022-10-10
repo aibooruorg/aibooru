@@ -18,7 +18,6 @@ class PostVote < ApplicationRecord
 
   scope :positive, -> { where("post_votes.score > 0") }
   scope :negative, -> { where("post_votes.score < 0") }
-  scope :public_votes, -> { active.positive.where.not(user: User.has_private_favorites) }
 
   deletable
 
@@ -28,7 +27,7 @@ class PostVote < ApplicationRecord
     elsif user.is_anonymous?
       public_votes
     else
-      active.where(user: user).or(public_votes)
+      active.where(user: user).or(positive)
     end
   end
 

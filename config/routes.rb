@@ -245,12 +245,6 @@ Rails.application.routes.draw do
   resources :tag_implications, only: [:show, :index, :destroy]
   resources :tag_versions, only: [:index, :show]
 
-  get "/redeem", to: "upgrade_codes#redeem", as: "redeem_upgrade_codes"
-  resources :upgrade_codes, only: [:create, :index] do
-    get :redeem, on: :collection
-    post :upgrade, on: :collection
-  end
-
   resources :uploads do
     collection do
       get :batch, to: redirect(path: "/uploads/new")
@@ -273,13 +267,6 @@ Rails.application.routes.draw do
 
     get :change_name, on: :member, to: "user_name_change_requests#new"
     get :custom_style, on: :collection
-  end
-  get "/upgrade", to: "user_upgrades#new", as: "new_user_upgrade"
-  get "/user_upgrades/new", to: redirect("/upgrade")
-  resources :user_upgrades, only: [:new, :create, :show, :index] do
-    get :receipt, on: :member
-    get :payment, on: :member
-    put :refund, on: :member
   end
   resources :user_events, only: [:index]
   resources :user_feedbacks, except: [:destroy]
@@ -348,7 +335,6 @@ Rails.application.routes.draw do
   get "/static/dtext_help" => "static#dtext_help", :as => "dtext_help"
   get "/static/terms_of_service", to: redirect("/terms_of_service")
   get "/static/contact", to: redirect("/contact")
-  get "/user_upgrade/new", to: redirect("/upgrade")
   get "/delayed_jobs", to: redirect("/jobs")
 
   get "/mock/recommender/recommend/:user_id" => "mock_services#recommender_recommend", as: "mock_recommender_recommend"

@@ -17,24 +17,12 @@ class UserPolicy < ApplicationPolicy
     user.is_moderator?
   end
 
-  def upgrade?
-    !user.is_anonymous?
-  end
-
   def fix_counts?
     !user.is_anonymous?
   end
 
   def can_see_last_logged_in_at?
     user.is_moderator?
-  end
-
-  def can_see_favorites?
-    user.is_admin? || record.id == user.id || !record.enable_private_favorites?
-  end
-
-  def can_enable_private_favorites?
-    user.is_gold?
   end
 
   def permitted_attributes_for_create
@@ -46,8 +34,8 @@ class UserPolicy < ApplicationPolicy
       comment_threshold default_image_size favorite_tags
       blacklisted_tags time_zone per_page custom_style theme
       receive_email_notifications
-      new_post_navigation_layout enable_private_favorites
-      style_usernames show_deleted_posts show_deleted_children
+      new_post_navigation_layout style_usernames
+      show_deleted_posts show_deleted_children
       disable_categorized_saved_searches disable_tagged_filenames
       disable_mobile_gestures enable_safe_mode
       enable_desktop_mode disable_post_tooltips

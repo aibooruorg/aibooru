@@ -1331,7 +1331,7 @@ class Post < ApplicationRecord
       def favorites_include(username, current_user = User.anonymous)
         favuser = User.find_by_name(username)
 
-        if favuser.present? && Pundit.policy!(current_user, favuser).can_see_favorites?
+        if favuser.present?
           where(id: favuser.favorites.select(:post_id))
         else
           none
@@ -1341,7 +1341,7 @@ class Post < ApplicationRecord
       def ordfav_matches(username, current_user = User.anonymous)
         user = User.find_by_name(username)
 
-        if user.present? && Pundit.policy!(current_user, user).can_see_favorites?
+        if user.present?
           joins(:favorites).merge(Favorite.where(user: user)).order("favorites.id DESC")
         else
           none
