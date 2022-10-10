@@ -1631,6 +1631,12 @@ class Post < ApplicationRecord
     end
   end
 
+  def self.track_view!(post_id, ip_addr)
+    Cache.get(Cache.hash("#{Danbooru.config.view_counter_salt}-#{ip_addr}-#{post_id}"), 1.week) do
+      Post.increment_counter(:views, post_id)
+    end
+  end
+
   def safeblocked?
     CurrentUser.safe_mode? && (rating != "g" || Danbooru.config.safe_mode_restricted_tags.any? { |tag| tag.in?(tag_array) })
   end
