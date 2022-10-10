@@ -41,7 +41,7 @@ class TagSetPresenter
     models = tags_for_category("ai_model").map(&:name).to_sentence
     models = "using #{models}" if models.present?
 
-    "#{characters} #{copyrights} #{artists} #{models}".strip
+    [characters, copyrights, artists, models].map { |part| part.presence }.compact.join(" ")
   end
 
   private
