@@ -155,7 +155,11 @@ Rails.application.routes.draw do
   resources :mod_actions
   resources :moderation_reports, only: [:new, :create, :index, :show, :update]
   resources :modqueue, only: [:index]
-  resources :news_updates
+  resources :news_updates do
+    member do
+      post :undelete
+    end
+  end
   resources :notes do
     member do
       put :revert
