@@ -57,6 +57,8 @@ gem "elastic-apm"
 gem "debug"
 gem "ffaker"
 gem "composite_primary_keys"
+gem "sentry-ruby"
+gem "sentry-rails"
 
 group :development do
   gem 'rubocop', require: false

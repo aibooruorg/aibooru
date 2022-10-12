@@ -28,6 +28,7 @@ class ApplicationController < ActionController::Base
 
   def self.rescue_with(*klasses, status: 500)
     rescue_from(*klasses) do |exception|
+      Sentry.capture_exception(exception)
       render_error_page(status, exception)
     end
   end
@@ -111,6 +112,7 @@ class ApplicationController < ActionController::Base
   end
 
   def rescue_exception(exception)
+    Sentry.capture_exception(exception)
     case exception
     when ActionView::Template::Error
       rescue_exception(exception.cause)

@@ -440,6 +440,11 @@ GEM
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
     semantic_range (3.0.0)
+    sentry-rails (5.5.0)
+      railties (>= 5.0)
+      sentry-ruby (~> 5.5.0)
+    sentry-ruby (5.5.0)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
     shoulda-context (2.0.0)
     shoulda-matchers (5.2.0)
       activesupport (>= 5.2.0)
@@ -587,6 +592,8 @@ DEPENDENCIES
   sanitize
   scenic
   selenium-webdriver
+  sentry-rails
+  sentry-ruby
   shoulda-context
   shoulda-matchers
   simple_form

@@ -598,6 +598,9 @@ module Danbooru
       # "http://localhost:8200"
     end
 
+    def sentry_url
+    end
+
     # True if the Winter Sale is active.
     def is_promotion?
       false
