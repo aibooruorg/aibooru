@@ -24,8 +24,6 @@ class PostVote < ApplicationRecord
   def self.visible(user)
     if user.is_admin?
       all
-    elsif user.is_anonymous?
-      public_votes
     else
       active.where(user: user).or(positive)
     end
