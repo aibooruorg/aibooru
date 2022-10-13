@@ -73,6 +73,7 @@ services:
       - TZ=Europe/London
       - URL=aibooru.online
       - VALIDATION=http
+      - SUBDOMAINS=general,safe
     ports:
       - 80:80
       - 443:443
