@@ -74,7 +74,6 @@ class User < ApplicationRecord
   attribute :blacklisted_tags, default: DEFAULT_BLACKLIST
   attribute :time_zone, default: "Eastern Time (US & Canada)"
   attribute :custom_style
-  attribute :sytle_usernames, default: true
   attribute :post_upload_count, default: 0
   attribute :post_update_count, default: 0
   attribute :note_update_count, default: 0
@@ -670,7 +669,6 @@ class User < ApplicationRecord
 
   def initialize_attributes
     self.new_post_navigation_layout = true
-    self.style_usernames = true
   end
 
   def presenter
