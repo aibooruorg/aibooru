@@ -785,6 +785,31 @@ class PostTest < ActiveSupport::TestCase
             assert_equal([@post.id], @pool.post_ids)
             assert_equal("aaa bbb", @post.tag_string)
           end
+
+          should "parse trailing backslash-escaped spaces correctly" do
+            @post.update!(tag_string: " a b c ")
+            assert_equal("a b c", @post.tag_string)
+
+            @post.update!(tag_string: 'newpool:b\  a')
+            assert_equal("a", @post.tag_string)
+            assert_equal("b", Pool.last.name)
+
+            @post.update!(tag_string: 'a newpool:c\ ')
+            assert_equal("a", @post.tag_string)
+            assert_equal("c", Pool.last.name)
+
+            @post.update!(tag_string: 'a newpool:d\  ')
+            assert_equal("a", @post.tag_string)
+            assert_equal("d", Pool.last.name)
+
+            @post.update!(tag_string: 'newpool:e\ a')
+            assert_equal("tagme", @post.tag_string)
+            assert_equal("e_a", Pool.last.name)
+
+            @post.update!(tag_string: 'a newpool:f\\')
+            assert_equal("a", @post.tag_string)
+            assert_equal("f\\", Pool.last.name)
+          end
         end
 
         context "for a rating" do
@@ -1192,8 +1217,15 @@ class PostTest < ActiveSupport::TestCase
       end
 
       context "a greyscale image missing the greyscale tag" do
-        should "automatically add the greyscale tag" do
+        should "automatically add the greyscale tag for a monochrome JPEG file" do
           @media_asset = MediaAsset.upload!("test/files/test-grey-no-profile.jpg")
+          @post.update!(md5: @media_asset.md5)
+          @post.reload.update!(tag_string: "tagme")
+          assert_equal("greyscale tagme", @post.tag_string)
+        end
+
+        should "automatically add the greyscale tag for a monochrome AVIF file" do
+          @media_asset = MediaAsset.upload!("test/files/avif/fox.profile0.8bpc.yuv420.monochrome.avif")
           @post.update!(md5: @media_asset.md5)
           @post.reload.update!(tag_string: "tagme")
           assert_equal("greyscale tagme", @post.tag_string)

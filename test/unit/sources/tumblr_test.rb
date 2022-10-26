@@ -96,6 +96,14 @@ module Sources
       )
     end
 
+    context "A video post with a https://va.media.tumblr.com/tumblr_*_720.mp4 URL" do
+      strategy_should_work(
+        "https://cloudstation.tumblr.com/post/697975577362251776/direct-quote-from-kaiba-post-battle-city",
+        image_urls: ["https://va.media.tumblr.com/tumblr_rjoh0hR8Xe1teimlz_720.mp4"],
+        download_size: 1_073_148,
+      )
+    end
+
     context "The source for a 'http://*.tumblr.com/post/*' answer post with inline images" do
       strategy_should_work(
         "https://noizave.tumblr.com/post/171237880542/test-ask",
@@ -186,6 +194,16 @@ module Sources
       )
     end
 
+    context "A www.tumblr.com/$blog_name/$work_id/$slug URL" do
+      strategy_should_work(
+        "https://www.tumblr.com/munespice/683613396085719040/saur-family",
+        image_urls: ["https://64.media.tumblr.com/fd6b4692f6e902af861fbc242736ae61/010fd31ffbc70e84-a8/s21000x21000/e0587516e05bae4cec244921f220b45bed08335c.jpg"],
+        artist_name: "munespice",
+        page_url: "https://munespice.tumblr.com/post/683613396085719040",
+        profile_url: "https://munespice.tumblr.com"
+      )
+    end
+
     context "A tumblr image url for which the extractable post url is a custom domain" do
       strategy_should_work(
         "https://64.media.tumblr.com/591b370b9deb7c6ef33d8c18dc2c8db5/tumblr_ph5huubDdz1w0f6yio1_1280.jpg",
@@ -239,6 +257,18 @@ module Sources
       assert(Source::URL.image_url?("https://25.media.tumblr.com/91719d337b218681abc48cdc24e"))
       assert_not(Source::URL.page_url?("https://25.media.tumblr.com/91719d337b218681abc48cdc24e"))
       assert_not(Source::URL.profile_url?("https://25.media.tumblr.com/91719d337b218681abc48cdc24e"))
+
+      assert(Source::URL.profile_url?("https://www.tumblr.com/tawni-tailwind"))
+      assert(Source::URL.profile_url?("https://www.tumblr.com/dashboard/blog/dankwartart"))
+      assert(Source::URL.profile_url?("https://www.tumblr.com/blog/artofelaineho"))
+      assert(Source::URL.profile_url?("https://www.tumblr.com/blog/view/artofelaineho"))
+      assert(Source::URL.profile_url?("https://tumblr.com/tawni-tailwind"))
+      assert(Source::URL.profile_url?("https://tumblr.com/dashboard/blog/dankwartart"))
+      assert(Source::URL.profile_url?("https://tumblr.com/blog/kervalchan"))
+      assert(Source::URL.profile_url?("https://tumblr.com/blog/view/artofelaineho"))
+      assert(Source::URL.profile_url?("https://rosarrie.tumblr.com/archive"))
+      assert(Source::URL.profile_url?("https://solisnotte.tumblr.com/about"))
+      assert(Source::URL.profile_url?("https://whereisnovember.tumblr.com/tagged/art"))
     end
   end
 end

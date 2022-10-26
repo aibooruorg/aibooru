@@ -160,6 +160,8 @@ class Post < ApplicationRecord
     end
 
     def preview_file_url
+      # XXX hack to return placeholder thumbnail for Flash files the /posts.json API.
+      return Danbooru.config.storage_manager.file_url("/images/flash-preview.png") if media_asset.is_flash?
       media_asset.variant(:preview).file_url
     end
 
@@ -184,7 +186,7 @@ class Post < ApplicationRecord
     end
 
     def is_image?
-      file_ext =~ /jpg|gif|png/i
+      file_ext =~ /jpg|gif|png|avif/i
     end
 
     def is_flash?
@@ -301,6 +303,11 @@ class Post < ApplicationRecord
       flags << "deleted" if is_deleted?
       flags << "banned" if is_banned?
       flags.join(" ")
+    end
+
+    # g => 0, s => 1, q => 2, e => 3
+    def rating_id
+      RATINGS.keys.index(rating)
     end
 
     def pretty_rating
@@ -1463,7 +1470,7 @@ class Post < ApplicationRecord
           :last_comment_bumped_at, :last_commented_at, :last_noted_at,
           :uploader, :approver, :parent,
           :artist_commentary, :flags, :appeals, :notes, :comments, :children,
-          :approvals, :replacements],
+          :approvals, :replacements, :media_metadata],
           current_user: current_user
         )
 
@@ -1640,7 +1647,6 @@ class Post < ApplicationRecord
   end
 
   def levelblocked?(user = CurrentUser.user)
-    #!user.is_gold? && RESTRICTED_TAGS.any? { |tag| has_tag?(tag) }
     !user.is_approver? && tag_string.match?(RESTRICTED_TAGS_REGEX)
   end
 
@@ -1694,7 +1700,7 @@ class Post < ApplicationRecord
     %i[
       uploader approver flags appeals events parent children notes
       comments approvals disapprovals replacements
-      artist_commentary media_asset ai_tags
+      artist_commentary media_asset media_metadata ai_tags
     ]
   end
 end

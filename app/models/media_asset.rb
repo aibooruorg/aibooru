@@ -3,7 +3,7 @@
 class MediaAsset < ApplicationRecord
   class Error < StandardError; end
 
-  FILE_TYPES = %w[jpg png gif mp4 webm swf zip]
+  FILE_TYPES = %w[jpg png gif avif mp4 webm swf zip]
   FILE_KEY_LENGTH = 9
   VARIANTS = %i[preview 180x180 360x360 720x720 sample original]
   MAX_FILE_SIZE = Danbooru.config.max_file_size.to_i
@@ -11,7 +11,6 @@ class MediaAsset < ApplicationRecord
   MAX_IMAGE_RESOLUTION = Danbooru.config.max_image_resolution
   MAX_IMAGE_WIDTH = Danbooru.config.max_image_width
   MAX_IMAGE_HEIGHT = Danbooru.config.max_image_height
-  ENABLE_SEO_POST_URLS = Danbooru.config.enable_seo_post_urls
   LARGE_IMAGE_WIDTH = Danbooru.config.large_image_width
   STORAGE_SERVICE = Danbooru.config.storage_manager
 
@@ -51,15 +50,15 @@ class MediaAsset < ApplicationRecord
 
   class Variant
     extend Memoist
+    include ActiveModel::Serializers::JSON
+    include ActiveModel::Serializers::Xml
 
-    attr_reader :media_asset, :variant
-    delegate :md5, :storage_service, :backup_storage_service, to: :media_asset
+    attr_reader :media_asset, :type
+    delegate :id, :md5, :file_key, :storage_service, :backup_storage_service, to: :media_asset
 
-    def initialize(media_asset, variant)
+    def initialize(media_asset, type)
       @media_asset = media_asset
-      @variant = variant.to_sym
-
-      raise ArgumentError, "asset doesn't have #{@variant} variant" unless Variant.exists?(@media_asset, @variant)
+      @type = type.to_sym
     end
 
     def store_file!(original_file)
@@ -85,7 +84,7 @@ class MediaAsset < ApplicationRecord
     end
 
     def convert_file(media_file)
-      case variant
+      case type
       in :preview
         media_file.preview(width, height, format: :jpeg, quality: 85)
       in :"180x180"
@@ -103,23 +102,18 @@ class MediaAsset < ApplicationRecord
       end
     end
 
-    def file_url(slug = "")
-      storage_service.file_url(file_path(slug))
+    def file_url(custom_filename = "")
+      url = Danbooru.config.media_asset_file_url(self, custom_filename)
+      storage_service.file_url(url)
     end
 
-    def file_path(slug = "")
-      if variant.in?(%i[preview 180x180 360x360 720x720]) && media_asset.is_flash?
-        "/images/download-preview.png"
-      else
-        slug = "__#{slug}__" if slug.present?
-        slug = nil if !ENABLE_SEO_POST_URLS
-        "/#{variant}/#{md5[0..1]}/#{md5[2..3]}/#{slug}#{file_name}"
-      end
+    def file_path
+      Danbooru.config.media_asset_file_path(self)
     end
 
     # The file name of this variant.
     def file_name
-      case variant
+      case type
       when :sample
         "sample-#{md5}.#{file_ext}"
       else
@@ -129,7 +123,7 @@ class MediaAsset < ApplicationRecord
 
     # The file extension of this variant.
     def file_ext
-      case variant
+      case type
       when :preview, :"180x180", :"360x360"
         "jpg"
       when :"720x720"
@@ -142,7 +136,7 @@ class MediaAsset < ApplicationRecord
     end
 
     def max_dimensions
-      case variant
+      case type
       when :preview
         [150, 150]
       when :"180x180"
@@ -170,21 +164,8 @@ class MediaAsset < ApplicationRecord
       dimensions[1]
     end
 
-    def self.exists?(media_asset, variant)
-      case variant
-      when :preview
-        true
-      when :"180x180"
-        true
-      when :"360x360"
-        true
-      when :"720x720"
-        true
-      when :sample
-        media_asset.is_ugoira? || (media_asset.is_static_image? && media_asset.image_width > LARGE_IMAGE_WIDTH)
-      when :original
-        true
-      end
+    def serializable_hash(*options)
+      { type: type, url: file_url, width: width, height: height, file_ext: file_ext }
     end
 
     memoize :file_name, :file_ext, :max_dimensions, :dimensions
@@ -292,6 +273,8 @@ class MediaAsset < ApplicationRecord
       def validate_media_file!(media_file, uploader)
         if !media_file.file_ext.to_s.in?(FILE_TYPES)
           raise Error, "File is not an image or video"
+        elsif !media_file.is_supported?
+          raise Error, "File type is not supported"
         elsif media_file.is_corrupt?
           raise Error, "File is corrupt"
         elsif media_file.file_size > MAX_FILE_SIZE
@@ -363,21 +346,33 @@ class MediaAsset < ApplicationRecord
 
   concerning :VariantMethods do
     def variant(type)
+      return nil unless has_variant?(type)
       Variant.new(self, type)
     end
 
-    def has_variant?(variant)
-      Variant.exists?(self, variant)
+    def has_variant?(type)
+      variant_types.include?(type.to_sym)
     end
 
     def variants
-      VARIANTS.select { |v| has_variant?(v) }.map { |v| variant(v) }
+      @variants ||= variant_types.map { |type| variant(type) }
+    end
+
+    def variant_types
+      @variant_types ||=
+        if is_flash?
+          [:original]
+        elsif (is_animated? && !is_ugoira?) || (is_static_image? && image_width <= LARGE_IMAGE_WIDTH)
+          VARIANTS - [:sample]
+        else
+          VARIANTS
+        end
     end
   end
 
   concerning :FileTypeMethods do
     def is_image?
-      file_ext.in?(%w[jpg png gif])
+      file_ext.in?(%w[jpg png gif avif])
     end
 
     def is_static_image?

@@ -59,6 +59,8 @@ gem "ffaker"
 gem "composite_primary_keys"
 gem "sentry-ruby"
 gem "sentry-rails"
+gem "resolv"
+gem "rover-df"
 
 group :development do
   gem 'rubocop', require: false

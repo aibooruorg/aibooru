@@ -16,7 +16,7 @@ class SessionLoader
   def initialize(request)
     @request = request
     @session = request.session
-    @params = request.parameters
+    @params = request.query_parameters
   end
 
   # Attempt to log a user in with the given username and password. Records a
@@ -58,9 +58,9 @@ class SessionLoader
   # resetting a password from an magic email link)
   #
   # Also performs post-load actions, including updating the user's last login
-  # timestamp, their last used IP, their timezone, their database timeout, their
-  # country, whether safe mode is enabled, their session cookie, and unbanning
-  # banned users if their ban is expired.
+  # timestamp, their last used IP, their timezone, their database timeout,
+  # whether safe mode is enabled, their session cookie, and unbanning banned
+  # users if their ban is expired.
   #
   # @see ApplicationController#set_current_user
   # @see CurrentUser
@@ -79,7 +79,6 @@ class SessionLoader
     update_last_logged_in_at
     update_last_ip_addr
     set_time_zone
-    set_country
     set_safe_mode
     set_save_data_mode
     initialize_session_cookies
@@ -90,7 +89,7 @@ class SessionLoader
 
   # @return [Boolean] true if the current request has an API key
   def has_api_authentication?
-    request.authorization.present? || params[:login].present? || (params[:api_key].present? && params[:api_key].is_a?(String))
+    request.authorization.present? || params.has_key?(:login) || params.has_key?(:api_key)
   end
 
   private
@@ -166,12 +165,6 @@ class SessionLoader
 
   def set_time_zone
     Time.zone = CurrentUser.user.time_zone
-  end
-
-  # Depends on Cloudflare
-  # https://support.cloudflare.com/hc/en-us/articles/200168236-Configuring-Cloudflare-IP-Geolocation
-  def set_country
-    CurrentUser.country = request.headers["CF-IPCountry"]
   end
 
   def set_safe_mode

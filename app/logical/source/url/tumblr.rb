@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Source::URL::Tumblr < Source::URL
+  RESERVED_NAMES = %w[about app blog dashboard developers explore jobs login logo policy press register security tagged tips]
+
   attr_reader :work_id, :blog_name, :directory, :full_image_url
 
   def self.match?(url)
@@ -46,8 +48,9 @@ class Source::URL::Tumblr < Source::URL
       @blog_name = subdomain unless subdomain == "www"
       @work_id = work_id
 
-    # https://tumblr.com/munespice/683613396085719040, new dashboard links
-    in ("tumblr.com" | "www.tumblr.com"), blog_name, /^\d+$/ => work_id
+    # https://tumblr.com/munespice/683613396085719040 # new dashboard links
+    # https://www.tumblr.com/yamujiburo/682910938493599744/will-tumblr-let-me-keep-this-up
+    in ("tumblr.com" | "www.tumblr.com"), blog_name, /^\d+$/ => work_id, *rest
       @blog_name = blog_name
       @work_id = work_id
 
@@ -69,6 +72,11 @@ class Source::URL::Tumblr < Source::URL
     # https://www.tumblr.com/dashboard/blog/dankwartart
     # https://tumblr.com/dashboard/blog/dankwartart
     in ("www.tumblr.com" | "tumblr.com"), "dashboard", "blog", blog_name
+      @blog_name = blog_name
+
+    # https://www.tumblr.com/tawni-tailwind
+    # https://tumblr.com/tawni-tailwind
+    in ("www.tumblr.com" | "tumblr.com"), blog_name unless blog_name.in?(RESERVED_NAMES)
       @blog_name = blog_name
 
     # https://rosarrie.tumblr.com/archive
@@ -116,12 +124,19 @@ class Source::URL::Tumblr < Source::URL
     subdomain&.ends_with?(".media") || subdomain&.in?(%w[data media])
   end
 
+  def video_url?
+    # https://va.media.tumblr.com/tumblr_rjoh0hR8Xe1teimlz_720.mp4
+    image_url? && file_ext.in?(%w[mp4 webm])
+  end
+
   def variants
     return [] unless @sample_size.present? && @filename.present?
     directory = "#{@directory}/" if @directory.present?
 
-    sizes = %w[1280 640 540 500h 500 400 250 100]
-    sizes.map { |size| "https://media.tumblr.com/#{directory}#{@filename}_#{size}.#{file_ext}" }
+    media_host = video_url? ? "va.media.tumblr.com" : "media.tumblr.com"
+    sizes = %w[1280 720 640 540 500h 500 400 250 100]
+
+    sizes.map { |size| "https://#{media_host}/#{directory}#{@filename}_#{size}.#{file_ext}" }
   end
 
   def page_url
