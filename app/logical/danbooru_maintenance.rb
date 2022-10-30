@@ -20,7 +20,7 @@ module DanbooruMaintenance
   end
 
   def weekly
-    queue RetireTagRelationshipsJob
+    #queue RetireTagRelationshipsJob
     queue DmailInactiveApproversJob
   end
 
