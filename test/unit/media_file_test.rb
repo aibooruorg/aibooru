@@ -21,18 +21,22 @@ class MediaFileTest < ActiveSupport::TestCase
       assert_equal([32, 32], MediaFile.open("test/files/test-static-32x32.gif").dimensions)
     end
 
+    should "determine the correct dimensions for a WebP file" do
+      assert_equal([550, 368], MediaFile.open("test/files/webp/fjord.webp").dimensions)
+    end
+
     should "determine the correct dimensions for an AVIF file" do
       assert_equal([2048, 858], MediaFile.open("test/files/avif/hdr_cosmos01000_cicp9-16-9_yuv420_limited_qp40.avif").dimensions)
     end
 
     should "determine the correct dimensions for a webm file" do
       skip unless MediaFile.videos_enabled?
-      assert_equal([512, 512], MediaFile.open("test/files/test-512x512.webm").dimensions)
+      assert_equal([512, 512], MediaFile.open("test/files/webm/test-512x512.webm").dimensions)
     end
 
     should "determine the correct dimensions for a mp4 file" do
       skip unless MediaFile.videos_enabled?
-      assert_equal([300, 300], MediaFile.open("test/files/test-300x300.mp4").dimensions)
+      assert_equal([300, 300], MediaFile.open("test/files/mp4/test-300x300.mp4").dimensions)
     end
 
     should "determine the correct dimensions for a ugoira file" do
@@ -58,7 +62,7 @@ class MediaFileTest < ActiveSupport::TestCase
     should "work for a video if called twice" do
       skip unless MediaFile.videos_enabled?
 
-      mf = MediaFile.open("test/files/test-512x512.webm")
+      mf = MediaFile.open("test/files/webm/test-512x512.webm")
       assert_equal([512, 512], mf.dimensions)
       assert_equal([512, 512], mf.dimensions)
 
@@ -89,6 +93,12 @@ class MediaFileTest < ActiveSupport::TestCase
       assert_equal(:gif, MediaFile.open("test/files/test-static-32x32.gif").file_ext)
     end
 
+    should "determine the correct extension for a WebP file" do
+      Dir["test/files/webp/*.webp"].each do |file|
+        assert_equal(:webp, MediaFile.open(file).file_ext)
+      end
+    end
+
     should "determine the correct extension for an AVIF file" do
       Dir["test/files/avif/*.avif"].each do |file|
         assert_equal(:avif, MediaFile.open(file).file_ext)
@@ -96,19 +106,19 @@ class MediaFileTest < ActiveSupport::TestCase
     end
 
     should "determine the correct extension for a webm file" do
-      assert_equal(:webm, MediaFile.open("test/files/test-512x512.webm").file_ext)
+      assert_equal(:webm, MediaFile.open("test/files/webm/test-512x512.webm").file_ext)
     end
 
     should "determine the correct extension for a mp4 file" do
-      assert_equal(:mp4, MediaFile.open("test/files/test-300x300.mp4").file_ext)
+      assert_equal(:mp4, MediaFile.open("test/files/mp4/test-300x300.mp4").file_ext)
     end
 
     should "determine the correct extension for a m4v file" do
-      assert_equal(:mp4, MediaFile.open("test/files/test-audio.m4v").file_ext)
+      assert_equal(:mp4, MediaFile.open("test/files/mp4/test-audio.m4v").file_ext)
     end
 
     should "determine the correct extension for an iso5 mp4 file" do
-      assert_equal(:mp4, MediaFile.open("test/files/test-iso5.mp4").file_ext)
+      assert_equal(:mp4, MediaFile.open("test/files/mp4/test-iso5.mp4").file_ext)
     end
 
     should "determine the correct extension for a ugoira file" do
@@ -137,6 +147,7 @@ class MediaFileTest < ActiveSupport::TestCase
       assert_equal([150, 101], MediaFile.open("test/files/test.jpg").preview(150, 150).dimensions)
       assert_equal([113, 150], MediaFile.open("test/files/test.png").preview(150, 150).dimensions)
       assert_equal([150, 150], MediaFile.open("test/files/test.gif").preview(150, 150).dimensions)
+      assert_equal([150, 100], MediaFile.open("test/files/webp/fjord.webp").preview(150, 150).dimensions)
       assert_equal([150, 63], MediaFile.open("test/files/avif/hdr_cosmos01000_cicp9-16-9_yuv420_limited_qp40.avif").preview(150, 150).dimensions)
     end
 
@@ -150,8 +161,8 @@ class MediaFileTest < ActiveSupport::TestCase
 
     should "generate a preview image for a video" do
       skip unless MediaFile.videos_enabled?
-      assert_equal([150, 150], MediaFile.open("test/files/test-512x512.webm").preview(150, 150).dimensions)
-      assert_equal([150, 150], MediaFile.open("test/files/test-300x300.mp4").preview(150, 150).dimensions)
+      assert_equal([150, 150], MediaFile.open("test/files/webm/test-512x512.webm").preview(150, 150).dimensions)
+      assert_equal([150, 150], MediaFile.open("test/files/mp4/test-300x300.mp4").preview(150, 150).dimensions)
     end
 
     should "be able to fit to width only" do
@@ -185,29 +196,74 @@ class MediaFileTest < ActiveSupport::TestCase
 
   context "for an mp4 file " do
     should "detect videos with audio" do
-      assert_equal(true, MediaFile.open("test/files/test-audio.mp4").has_audio?)
-      assert_equal(false, MediaFile.open("test/files/test-300x300.mp4").has_audio?)
+      assert_equal(true, MediaFile.open("test/files/mp4/test-audio.mp4").has_audio?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-300x300.mp4").has_audio?)
     end
 
     should "determine the duration of the video" do
-      file = MediaFile.open("test/files/test-audio.mp4")
+      file = MediaFile.open("test/files/mp4/test-audio.mp4")
+      assert_equal(false, file.is_corrupt?)
       assert_equal(1.002667, file.duration)
       assert_equal(10/1.002667, file.frame_rate)
       assert_equal(10, file.frame_count)
 
-      file = MediaFile.open("test/files/test-300x300.mp4")
+      file = MediaFile.open("test/files/mp4/test-300x300.mp4")
+      assert_equal(false, file.is_corrupt?)
       assert_equal(5.7, file.duration)
       assert_equal(1.75, file.frame_rate.round(2))
       assert_equal(10, file.frame_count)
+    end
+
+    should "determine the pixel format of the video" do
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-300x300-av1.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-300x300-h265.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-300x300-vp9.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-300x300.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-audio.m4v").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-audio.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-300x300-iso4.mp4").pix_fmt)
+      assert_equal("yuv420p", MediaFile.open("test/files/mp4/test-iso5.mp4").pix_fmt)
+      assert_equal("yuv444p", MediaFile.open("test/files/mp4/test-300x300-yuv444p-h264.mp4").pix_fmt)
+      assert_equal("yuvj420p", MediaFile.open("test/files/mp4/test-300x300-yuvj420p-h264.mp4").pix_fmt)
+      assert_equal("yuv420p10le", MediaFile.open("test/files/mp4/test-yuv420p10le-av1.mp4").pix_fmt)
+      assert_equal("yuv420p10le", MediaFile.open("test/files/mp4/test-yuv420p10le-h264.mp4").pix_fmt)
+      assert_equal("yuv420p10le", MediaFile.open("test/files/mp4/test-yuv420p10le-vp9.mp4").pix_fmt)
+    end
+
+    should "detect corrupt videos" do
+      assert_equal(true, MediaFile.open("test/files/mp4/test-corrupt.mp4").is_corrupt?)
+    end
+
+    should "detect supported files" do
+      assert_equal(true, MediaFile.open("test/files/mp4/test-300x300.mp4").is_supported?)
+      assert_equal(true, MediaFile.open("test/files/mp4/test-300x300-vp9.mp4").is_supported?)
+      assert_equal(true, MediaFile.open("test/files/mp4/test-300x300-yuvj420p-h264.mp4").is_supported?)
+      assert_equal(true, MediaFile.open("test/files/mp4/test-300x300-iso4.mp4").is_supported?)
+      assert_equal(true, MediaFile.open("test/files/mp4/test-300x300-3gp5.mp4").is_supported?)
+
+      assert_equal(false, MediaFile.open("test/files/mp4/test-300x300-h265.mp4").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-300x300-av1.mp4").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-300x300-yuv444p-h264.mp4").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-yuv420p10le-av1.mp4").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-yuv420p10le-h264.mp4").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/mp4/test-yuv420p10le-vp9.mp4").is_supported?)
     end
   end
 
   context "for a webm file" do
     should "determine the duration of the video" do
-      file = MediaFile.open("test/files/test-512x512.webm")
+      file = MediaFile.open("test/files/webm/test-512x512.webm")
       assert_equal(0.48, file.duration)
       assert_equal(10/0.48, file.frame_rate)
       assert_equal(10, file.frame_count)
+    end
+
+    should "detect supported files" do
+      assert_equal(true, MediaFile.open("test/files/webm/test-512x512.webm").is_supported?)
+      assert_equal(true, MediaFile.open("test/files/webm/test-gbrp-vp9.webm").is_supported?)
+
+      assert_equal(false, MediaFile.open("test/files/webm/test-512x512.mkv").is_supported?)
+      assert_equal(false, MediaFile.open("test/files/webm/test-yuv420p10le-vp9.webm").is_supported?)
     end
   end
 
@@ -302,6 +358,40 @@ class MediaFileTest < ActiveSupport::TestCase
         assert_equal(false, file.is_animated?)
         assert_equal(0, file.frame_count)
       end
+    end
+  end
+
+  context "a WebP file" do
+    should "be able to read WebP files" do
+      Dir["test/files/webp/*.webp"].each do |file|
+        assert_nothing_raised { MediaFile.open(file).attributes }
+      end
+    end
+
+    should "detect animated files" do
+      assert_equal(true, MediaFile.open("test/files/webp/nyancat.webp").is_animated?)
+      assert_equal(true, MediaFile.open("test/files/webp/nyancat.webp").is_animated_webp?)
+      assert_equal(true, MediaFile.open("test/files/webp/nyancat.webp").metadata.is_animated?)
+      assert_equal(false, MediaFile.open("test/files/webp/nyancat.webp").is_supported?)
+      assert_equal(12, MediaFile.open("test/files/webp/nyancat.webp").frame_count)
+      assert_equal(Float::INFINITY, MediaFile.open("test/files/webp/nyancat.webp").metadata.loop_count)
+
+      # assert_equal(0.84, MediaFile.open("test/files/webp/nyancat.webp").duration)
+    end
+
+    should "be able to generate a preview" do
+      assert_equal([128, 128], MediaFile.open("test/files/webp/test.webp").preview(180, 180).dimensions)
+      assert_equal([176, 180], MediaFile.open("test/files/webp/2_webp_a.webp").preview(180, 180).dimensions)
+      assert_equal([176, 180], MediaFile.open("test/files/webp/2_webp_ll.webp").preview(180, 180).dimensions)
+      assert_equal([180, 120], MediaFile.open("test/files/webp/Exif2.webp").preview(180, 180).dimensions)
+      assert_equal([180, 120], MediaFile.open("test/files/webp/fjord.webp").preview(180, 180).dimensions)
+      assert_equal([180,  55], MediaFile.open("test/files/webp/lossless1.webp").preview(180, 180).dimensions)
+      assert_equal([180,  55], MediaFile.open("test/files/webp/lossy_alpha1.webp").preview(180, 180).dimensions)
+    end
+
+    should "ignore EXIF orientation tags" do
+      # XXX It's possible for .webp files to contain the IFD0:Orientation tag, but browsers currently ignore it, so we do too.
+      assert_equal(false, MediaFile.open("test/files/webp/Exif2.webp").metadata.is_rotated?)
     end
   end
 

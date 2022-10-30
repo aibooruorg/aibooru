@@ -179,7 +179,7 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         end
       end
 
-      context "for a corrupted image" do
+      context "for a corrupted file" do
         should "fail for a corrupted jpeg" do
           create_upload!("test/files/test-corrupt.jpg", user: @user)
           assert_match("corrupt", Upload.last.error)
@@ -194,6 +194,18 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         should "fail for a corrupted png" do
           create_upload!("test/files/test-corrupt.png", user: @user)
           assert_match("corrupt", Upload.last.error)
+        end
+
+        should "fail for a corrupted mp4" do
+          create_upload!("test/files/mp4/test-corrupt.mp4", user: @user)
+          assert_match("corrupt", Upload.last.error)
+        end
+      end
+
+      context "for an unsupported WebP file" do
+        should "fail for an animated WebP" do
+          create_upload!("test/files/webp/nyancat.webp", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
         end
       end
 
@@ -224,6 +236,48 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         end
       end
 
+      context "for an unsupported video file" do
+        should "fail for a .mkv file" do
+          create_upload!("test/files/webm/test-512x512.mkv", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a .mp4 file encoded with h265" do
+          create_upload!("test/files/mp4/test-300x300-h265.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a .mp4 file encoded with av1" do
+          create_upload!("test/files/mp4/test-300x300-av1.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a 10-bit color .mp4 file encoded with av1" do
+          create_upload!("test/files/mp4/test-yuv420p10le-av1.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a 10-bit color .mp4 file encoded with h264" do
+          create_upload!("test/files/mp4/test-yuv420p10le-h264.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a 10-bit color .mp4 file encoded with vp9" do
+          create_upload!("test/files/mp4/test-yuv420p10le-vp9.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a 4:4:4 subsampled .mp4 file" do
+          create_upload!("test/files/mp4/test-300x300-yuv444p-h264.mp4", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+
+        should "fail for a 10-bit color .webm file encoded with vp9" do
+          create_upload!("test/files/webm/test-yuv420p10le-vp9.webm", user: @user)
+          assert_match("File type is not supported", Upload.last.error)
+        end
+      end
+
       context "for a video longer than the video length limit" do
         should "fail for a regular user" do
           create_upload!("https://cdn.donmai.us/original/63/cb/63cb09f2526ef3ac14f11c011516ad9b.webm", user: @user)
@@ -233,12 +287,9 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         end
       end
 
-      # XXX fixme
       context "for a video longer than the video length limit" do
-        should_eventually "work for an admin" do
-          @source = "https://cdn.donmai.us/original/63/cb/63cb09f2526ef3ac14f11c011516ad9b.webm"
-          post_auth uploads_path(format: :json), create(:admin_user), params: { upload: { source: @source }}
-          perform_enqueued_jobs
+        should "work for an admin" do
+          create_upload!("https://cdn.donmai.us/original/63/cb/63cb09f2526ef3ac14f11c011516ad9b.webm", user: create(:admin_user))
 
           assert_response 201
           assert_equal("completed", Upload.last.status)
@@ -287,14 +338,46 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         assert_equal(true, upload.media_assets.first.media_metadata.present?)
       end
 
+      context "uploading an AVIF file" do
+        should "generate thumbnails" do
+          upload = assert_successful_upload("test/files/avif/paris_icc_exif_xmp.avif", user: @user)
+          media_asset = upload.media_assets.first
+
+          full_variant = media_asset.variant(:full).open_file
+          assert_equal([403, 302], full_variant.dimensions)
+          assert_equal(:jpg, full_variant.file_ext)
+
+          assert_nil(media_asset.variant(:sample))
+        end
+      end
+
+      context "uploading a WebP file" do
+        should "generate thumbnails" do
+          upload = assert_successful_upload("test/files/webp/fjord.webp", user: @user)
+          media_asset = upload.media_assets.first
+
+          full_variant = media_asset.variant(:full).open_file
+          assert_equal([550, 368], full_variant.dimensions)
+          assert_equal(:jpg, full_variant.file_ext)
+
+          assert_nil(media_asset.variant(:sample))
+        end
+      end
+
       context "uploading a file from your computer" do
         should_upload_successfully("test/files/test.jpg")
         should_upload_successfully("test/files/test.png")
         should_upload_successfully("test/files/test-static-32x32.gif")
         should_upload_successfully("test/files/test-animated-86x52.gif")
-        should_upload_successfully("test/files/test-300x300.mp4")
-        should_upload_successfully("test/files/test-512x512.webm")
-        should_upload_successfully("test/files/test-audio.m4v")
+        should_upload_successfully("test/files/mp4/test-300x300.mp4")
+        should_upload_successfully("test/files/mp4/test-300x300-vp9.mp4")
+        should_upload_successfully("test/files/mp4/test-300x300-yuvj420p-h264.mp4")
+        should_upload_successfully("test/files/mp4/test-300x300-iso4.mp4")
+        should_upload_successfully("test/files/mp4/test-audio.mp4")
+        should_upload_successfully("test/files/mp4/test-audio.m4v")
+        should_upload_successfully("test/files/mp4/test-iso5.mp4")
+        should_upload_successfully("test/files/webm/test-512x512.webm")
+        should_upload_successfully("test/files/webm/test-gbrp-vp9.webm")
         # should_upload_successfully("test/files/compressed.swf")
 
         should_upload_successfully("test/files/avif/fox.profile0.8bpc.yuv420.monochrome.avif")
@@ -302,6 +385,14 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         should_upload_successfully("test/files/avif/hdr_cosmos01000_cicp9-16-9_yuv444_full_qp40.avif")
         should_upload_successfully("test/files/avif/paris_icc_exif_xmp.avif")
         should_upload_successfully("test/files/avif/tiger_3layer_1res.avif")
+
+        should_upload_successfully("test/files/webp/test.webp")
+        should_upload_successfully("test/files/webp/fjord.webp")
+        should_upload_successfully("test/files/webp/2_webp_a.webp")
+        should_upload_successfully("test/files/webp/2_webp_ll.webp")
+        should_upload_successfully("test/files/webp/Exif2.webp")
+        should_upload_successfully("test/files/webp/lossless1.webp")
+        should_upload_successfully("test/files/webp/lossy_alpha1.webp")
       end
 
       context "uploading multiple files from your computer" do
@@ -327,6 +418,7 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
           upload = assert_successful_upload("https://www.pixiv.net/en/artworks/45982180", user: @user)
 
           assert_equal([60] * 70, upload.media_assets.first.metadata["Ugoira:FrameDelays"])
+          assert_equal(:webm, upload.media_assets.first.variant(:sample).open_file.file_ext)
         end
       end
 

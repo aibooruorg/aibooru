@@ -5,6 +5,8 @@
 # @see https://github.com/libvips/ruby-vips
 # @see https://libvips.github.io/libvips/API/current
 class MediaFile::Image < MediaFile
+  delegate :thumbnail_image, to: :image
+
   def dimensions
     image.size
   rescue Vips::Error
@@ -16,6 +18,8 @@ class MediaFile::Image < MediaFile
     when :avif
       # XXX Mirrored AVIFs should be unsupported too, but we currently can't detect the mirrored flag using exiftool or ffprobe.
       !metadata.is_rotated? && !metadata.is_cropped? && !metadata.is_grid_image? && !metadata.is_animated_avif?
+    when :webp
+      !is_animated?
     else
       true
     end
@@ -34,11 +38,12 @@ class MediaFile::Image < MediaFile
   end
 
   def frame_count
-    if file_ext == :gif
-      image.get("n-pages")
-    elsif file_ext == :png
+    case file_ext
+    when :gif, :webp
+      image.get("n-pages") if image.get_fields.include?("n-pages")
+    when :png
       metadata.fetch("PNG:AnimationFrames", 1)
-    elsif file_ext == :avif
+    when :avif
       video.frame_count
     else
       nil
@@ -58,21 +63,21 @@ class MediaFile::Image < MediaFile
     image.interpretation
   end
 
-  def resize(max_width, max_height, format: :jpeg, quality: 85, **options)
+  def resize!(max_width, max_height, format: :jpeg, quality: 85, **options)
     # @see https://www.libvips.org/API/current/Using-vipsthumbnail.md.html
     # @see https://www.libvips.org/API/current/libvips-resample.html#vips-thumbnail
     if colorspace.in?(%i[srgb rgb16])
-      resized_image = preview_frame.image.thumbnail_image(max_width, height: max_height, import_profile: "srgb", export_profile: "srgb", **options)
+      resized_image = thumbnail_image(max_width, height: max_height, import_profile: "srgb", export_profile: "srgb", **options)
     elsif colorspace == :cmyk
       # Leave CMYK as CMYK for better color accuracy than sRGB.
-      resized_image = preview_frame.image.thumbnail_image(max_width, height: max_height, import_profile: "cmyk", export_profile: "cmyk", intent: :relative, **options)
+      resized_image = thumbnail_image(max_width, height: max_height, import_profile: "cmyk", export_profile: "cmyk", intent: :relative, **options)
     elsif colorspace.in?(%i[b-w grey16]) && has_embedded_profile?
       # Convert greyscale to sRGB so that the color profile is properly applied before we strip it.
-      resized_image = preview_frame.image.thumbnail_image(max_width, height: max_height, export_profile: "srgb", **options)
+      resized_image = thumbnail_image(max_width, height: max_height, export_profile: "srgb", **options)
     elsif colorspace.in?(%i[b-w grey16])
       # Otherwise, leave greyscale without a profile as greyscale because
       # converting it to sRGB would change it from 1 channel to 3 channels.
-      resized_image = preview_frame.image.thumbnail_image(max_width, height: max_height, **options)
+      resized_image = thumbnail_image(max_width, height: max_height, **options)
     else
       raise NotImplementedError
     end
@@ -99,9 +104,9 @@ class MediaFile::Image < MediaFile
     MediaFile::Image.new(output_file)
   end
 
-  def preview(max_width, max_height, **options)
+  def preview!(max_width, max_height, **options)
     w, h = MediaFile.scale_dimensions(width, height, max_width, max_height)
-    resize(w, h, size: :force, **options)
+    preview_frame.resize!(w, h, size: :force, **options)
   end
 
   def preview_frame
@@ -122,6 +127,10 @@ class MediaFile::Image < MediaFile
 
   def is_animated_png?
     file_ext == :png && is_animated?
+  end
+
+  def is_animated_webp?
+    file_ext == :webp && is_animated?
   end
 
   def is_animated_avif?

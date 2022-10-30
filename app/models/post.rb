@@ -118,7 +118,7 @@ class Post < ApplicationRecord
       tag_string: tag_string,
       rating: rating,
       parent_id: parent_id,
-      is_pending: !upload.uploader.can_upload_free? || is_pending.to_s.truthy?,
+      is_pending: !upload.uploader.is_contributor? || is_pending.to_s.truthy?,
       artist_commentary: (commentary if commentary.any_field_present?),
     )
   end
@@ -186,7 +186,7 @@ class Post < ApplicationRecord
     end
 
     def is_image?
-      file_ext =~ /jpg|gif|png|avif/i
+      file_ext.in?(%w[jpg gif png webp avif])
     end
 
     def is_flash?

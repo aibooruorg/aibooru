@@ -528,7 +528,7 @@ CREATE TABLE public.dtext_links (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     model_type character varying NOT NULL,
-    model_id integer NOT NULL,
+    model_id bigint NOT NULL,
     link_type integer NOT NULL,
     link_target character varying NOT NULL
 );
@@ -561,7 +561,7 @@ CREATE TABLE public.email_addresses (
     id bigint NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    user_id integer NOT NULL,
+    user_id bigint NOT NULL,
     address character varying NOT NULL,
     normalized_address character varying NOT NULL,
     is_verified boolean DEFAULT false NOT NULL,
@@ -598,7 +598,8 @@ CREATE TABLE public.favorite_groups (
     creator_id integer NOT NULL,
     post_ids integer[] DEFAULT '{}'::integer[] NOT NULL,
     created_at timestamp without time zone NOT NULL,
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    is_public boolean DEFAULT true NOT NULL
 );
 
 
@@ -800,10 +801,23 @@ ALTER SEQUENCE public.forum_topics_id_seq OWNED BY public.forum_topics.id;
 --
 
 CREATE TABLE public.good_job_processes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     state jsonb
+);
+
+
+--
+-- Name: good_job_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.good_job_settings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    key text,
+    value jsonb
 );
 
 
@@ -812,7 +826,7 @@ CREATE TABLE public.good_job_processes (
 --
 
 CREATE TABLE public.good_jobs (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT public.gen_random_uuid() NOT NULL,
     queue_name text,
     priority integer,
     serialized_params jsonb,
@@ -1463,9 +1477,7 @@ CREATE TABLE public.posts (
     last_commented_at timestamp without time zone,
     has_active_children boolean DEFAULT false,
     bit_flags bigint DEFAULT 0 NOT NULL,
-    tag_count_meta integer DEFAULT 0 NOT NULL,
-    tag_count_ai_model integer DEFAULT 0 NOT NULL,
-    views integer DEFAULT 0 NOT NULL
+    tag_count_meta integer DEFAULT 0 NOT NULL
 );
 
 
@@ -1893,6 +1905,41 @@ ALTER SEQUENCE public.tags_id_seq OWNED BY public.tags.id;
 
 
 --
+-- Name: upgrade_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.upgrade_codes (
+    id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying NOT NULL,
+    status integer NOT NULL,
+    creator_id integer NOT NULL,
+    redeemer_id integer,
+    user_upgrade_id integer
+);
+
+
+--
+-- Name: upgrade_codes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.upgrade_codes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: upgrade_codes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.upgrade_codes_id_seq OWNED BY public.upgrade_codes.id;
+
+
+--
 -- Name: upload_media_assets; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2006,6 +2053,23 @@ CREATE TABLE public.user_name_change_requests (
     desired_name character varying NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: user_upgrades; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_upgrades (
+    id integer NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    recipient_id integer NOT NULL,
+    purchaser_id integer NOT NULL,
+    upgrade_type integer NOT NULL,
+    status integer NOT NULL,
+    transaction_id character varying,
+    payment_processor integer DEFAULT 0 NOT NULL
 );
 
 
@@ -2279,6 +2343,15 @@ UNION ALL
     user_feedback.created_at AS event_at
    FROM public.user_feedback
 UNION ALL
+( SELECT 'UserUpgrade'::character varying AS model_type,
+    user_upgrades.id AS model_id,
+    user_upgrades.purchaser_id AS user_id,
+    'create'::character varying AS event_type,
+    user_upgrades.created_at AS event_at
+   FROM public.user_upgrades
+  WHERE (user_upgrades.status = ANY (ARRAY[20, 30]))
+  ORDER BY user_upgrades.created_at DESC)
+UNION ALL
  SELECT 'UserNameChangeRequest'::character varying AS model_type,
     user_name_change_requests.id AS model_id,
     user_name_change_requests.user_id,
@@ -2384,6 +2457,25 @@ CREATE SEQUENCE public.user_sessions_id_seq
 --
 
 ALTER SEQUENCE public.user_sessions_id_seq OWNED BY public.user_sessions.id;
+
+
+--
+-- Name: user_upgrades_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.user_upgrades_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: user_upgrades_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.user_upgrades_id_seq OWNED BY public.user_upgrades.id;
 
 
 --
@@ -2778,6 +2870,13 @@ ALTER TABLE ONLY public.tags ALTER COLUMN id SET DEFAULT nextval('public.tags_id
 
 
 --
+-- Name: upgrade_codes id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.upgrade_codes ALTER COLUMN id SET DEFAULT nextval('public.upgrade_codes_id_seq'::regclass);
+
+
+--
 -- Name: upload_media_assets id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2817,6 +2916,13 @@ ALTER TABLE ONLY public.user_name_change_requests ALTER COLUMN id SET DEFAULT ne
 --
 
 ALTER TABLE ONLY public.user_sessions ALTER COLUMN id SET DEFAULT nextval('public.user_sessions_id_seq'::regclass);
+
+
+--
+-- Name: user_upgrades id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_upgrades ALTER COLUMN id SET DEFAULT nextval('public.user_upgrades_id_seq'::regclass);
 
 
 --
@@ -3006,6 +3112,14 @@ ALTER TABLE ONLY public.forum_topics
 
 ALTER TABLE ONLY public.good_job_processes
     ADD CONSTRAINT good_job_processes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: good_job_settings good_job_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.good_job_settings
+    ADD CONSTRAINT good_job_settings_pkey PRIMARY KEY (id);
 
 
 --
@@ -3233,6 +3347,14 @@ ALTER TABLE ONLY public.tags
 
 
 --
+-- Name: upgrade_codes upgrade_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.upgrade_codes
+    ADD CONSTRAINT upgrade_codes_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: upload_media_assets upload_media_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3278,6 +3400,14 @@ ALTER TABLE ONLY public.user_name_change_requests
 
 ALTER TABLE ONLY public.user_sessions
     ADD CONSTRAINT user_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_upgrades user_upgrades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_upgrades
+    ADD CONSTRAINT user_upgrades_pkey PRIMARY KEY (id);
 
 
 --
@@ -3732,6 +3862,20 @@ CREATE INDEX index_comments_on_updater_id ON public.comments USING btree (update
 
 
 --
+-- Name: index_completed_user_upgrades_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_completed_user_upgrades_on_created_at ON public.user_upgrades USING btree (created_at) WHERE (status = ANY (ARRAY[20, 30]));
+
+
+--
+-- Name: index_completed_user_upgrades_on_updater_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_completed_user_upgrades_on_updater_id_and_created_at ON public.user_upgrades USING btree (purchaser_id, created_at) WHERE (status = ANY (ARRAY[20, 30]));
+
+
+--
 -- Name: index_dmails_on_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3886,10 +4030,24 @@ CREATE INDEX index_favorite_groups_on_created_at ON public.favorite_groups USING
 
 
 --
+-- Name: index_favorite_groups_on_created_at_id_is_public_creator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_favorite_groups_on_created_at_id_is_public_creator_id ON public.favorite_groups USING btree (created_at, id, is_public, creator_id);
+
+
+--
 -- Name: index_favorite_groups_on_creator_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_favorite_groups_on_creator_id ON public.favorite_groups USING btree (creator_id);
+
+
+--
+-- Name: index_favorite_groups_on_is_public; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_favorite_groups_on_is_public ON public.favorite_groups USING btree (is_public);
 
 
 --
@@ -4068,10 +4226,24 @@ CREATE INDEX index_forum_topics_on_updated_at ON public.forum_topics USING btree
 
 
 --
+-- Name: index_good_job_settings_on_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_good_job_settings_on_key ON public.good_job_settings USING btree (key);
+
+
+--
 -- Name: index_good_jobs_jobs_on_finished_at; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_good_jobs_jobs_on_finished_at ON public.good_jobs USING btree (finished_at) WHERE ((retried_good_job_id IS NULL) AND (finished_at IS NOT NULL));
+
+
+--
+-- Name: index_good_jobs_jobs_on_priority_created_at_when_unfinished; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_good_jobs_jobs_on_priority_created_at_when_unfinished ON public.good_jobs USING btree (priority DESC NULLS LAST, created_at) WHERE (finished_at IS NULL);
 
 
 --
@@ -5294,10 +5466,38 @@ CREATE INDEX index_tags_on_post_count ON public.tags USING btree (post_count);
 
 
 --
--- Name: index_upload_media_assets_on_error; Type: INDEX; Schema: public; Owner: -
+-- Name: index_upgrade_codes_on_code; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_upload_media_assets_on_error ON public.upload_media_assets USING btree (error) WHERE (error IS NOT NULL);
+CREATE UNIQUE INDEX index_upgrade_codes_on_code ON public.upgrade_codes USING btree (code);
+
+
+--
+-- Name: index_upgrade_codes_on_creator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_upgrade_codes_on_creator_id ON public.upgrade_codes USING btree (creator_id);
+
+
+--
+-- Name: index_upgrade_codes_on_redeemer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_upgrade_codes_on_redeemer_id ON public.upgrade_codes USING btree (redeemer_id) WHERE (redeemer_id IS NOT NULL);
+
+
+--
+-- Name: index_upgrade_codes_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_upgrade_codes_on_status ON public.upgrade_codes USING btree (status);
+
+
+--
+-- Name: index_upgrade_codes_on_user_upgrade_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_upgrade_codes_on_user_upgrade_id ON public.upgrade_codes USING btree (user_upgrade_id) WHERE (user_upgrade_id IS NOT NULL);
 
 
 --
@@ -5501,6 +5701,48 @@ CREATE INDEX index_user_sessions_on_session_id ON public.user_sessions USING btr
 --
 
 CREATE INDEX index_user_sessions_on_updated_at ON public.user_sessions USING btree (updated_at);
+
+
+--
+-- Name: index_user_upgrades_on_payment_processor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_payment_processor ON public.user_upgrades USING btree (payment_processor);
+
+
+--
+-- Name: index_user_upgrades_on_purchaser_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_purchaser_id ON public.user_upgrades USING btree (purchaser_id);
+
+
+--
+-- Name: index_user_upgrades_on_recipient_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_recipient_id ON public.user_upgrades USING btree (recipient_id);
+
+
+--
+-- Name: index_user_upgrades_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_status ON public.user_upgrades USING btree (status);
+
+
+--
+-- Name: index_user_upgrades_on_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_transaction_id ON public.user_upgrades USING btree (transaction_id);
+
+
+--
+-- Name: index_user_upgrades_on_upgrade_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_user_upgrades_on_upgrade_type ON public.user_upgrades USING btree (upgrade_type);
 
 
 --
@@ -5924,6 +6166,14 @@ ALTER TABLE ONLY public.forum_topics
 
 
 --
+-- Name: user_upgrades fk_rails_55b7770fa9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_upgrades
+    ADD CONSTRAINT fk_rails_55b7770fa9 FOREIGN KEY (recipient_id) REFERENCES public.users(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: tag_implications fk_rails_567423c3a3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6028,11 +6278,27 @@ ALTER TABLE ONLY public.post_approvals
 
 
 --
+-- Name: upgrade_codes fk_rails_778e1e40b5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.upgrade_codes
+    ADD CONSTRAINT fk_rails_778e1e40b5 FOREIGN KEY (redeemer_id) REFERENCES public.users(id);
+
+
+--
 -- Name: favorite_groups fk_rails_796204a5e3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.favorite_groups
     ADD CONSTRAINT fk_rails_796204a5e3 FOREIGN KEY (creator_id) REFERENCES public.users(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: upgrade_codes fk_rails_80bbec9661; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.upgrade_codes
+    ADD CONSTRAINT fk_rails_80bbec9661 FOREIGN KEY (user_upgrade_id) REFERENCES public.user_upgrades(id);
 
 
 --
@@ -6204,6 +6470,14 @@ ALTER TABLE ONLY public.uploads
 
 
 --
+-- Name: upgrade_codes fk_rails_d5a4e5e1a6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.upgrade_codes
+    ADD CONSTRAINT fk_rails_d5a4e5e1a6 FOREIGN KEY (creator_id) REFERENCES public.users(id);
+
+
+--
 -- Name: tag_implications fk_rails_dba2c19f93; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6305,6 +6579,14 @@ ALTER TABLE ONLY public.post_votes
 
 ALTER TABLE ONLY public.upload_media_assets
     ADD CONSTRAINT fk_rails_f6bce0ea3f FOREIGN KEY (media_asset_id) REFERENCES public.media_assets(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: user_upgrades fk_rails_f9349ed07b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_upgrades
+    ADD CONSTRAINT fk_rails_f9349ed07b FOREIGN KEY (purchaser_id) REFERENCES public.users(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -6615,14 +6897,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220924092056'),
 ('20220925045236'),
 ('20220926050108'),
-<<<<<<< HEAD
 ('20221003080342'),
-('20221010035855');
-=======
-('20220930224600'),
-('20221003080342'),
-('20221009230933'),
-('20221010070458');
->>>>>>> db138abab (remove references to gold and upgrades)
+('20221010035855'),
+('20221026084655'),
+('20221026084656'),
+('20221027000931');
 
 
