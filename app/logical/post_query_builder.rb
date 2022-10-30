@@ -34,7 +34,7 @@ class PostQueryBuilder
     user approver commenter comm noter noteupdater artcomm commentaryupdater
     flagger appealer upvote downvote fav ordfav favgroup ordfavgroup pool
     ordpool note comment commentary id rating source status filetype
-    disapproved parent child search embedded md5 width height mpixels ratio
+    disapproved parent child search embedded md5 width height mpixels ratio views
     score upvotes downvotes favcount filesize date age order limit tagcount pixiv_id pixiv
     unaliased exif duration random is has ai
   ] + COUNT_METATAGS + COUNT_METATAG_SYNONYMS + CATEGORY_COUNT_METATAGS
@@ -57,6 +57,7 @@ class PostQueryBuilder
     filesize filesize_asc
     tagcount tagcount_asc
     duration duration_asc
+    views views_asc
     rank
     curated
     modqueue
@@ -119,6 +120,8 @@ class PostQueryBuilder
       relation.attribute_matches(value, :tag_count)
     when "duration"
       relation.attribute_matches(value, "media_assets.duration", :float).joins(:media_asset)
+    when "views"
+      relation.attribute_matches(value, :views)
     when "is"
       relation.is_matches(value, current_user)
     when "has"
@@ -453,6 +456,12 @@ class PostQueryBuilder
 
     when "duration_asc"
       relation = relation.joins(:media_asset).reorder("media_assets.duration ASC NULLS LAST, posts.id ASC")
+
+    when "views", "views_desc"
+      relation = relation.reorder("posts.views DESC")
+
+    when "views_asc"
+      relation = relation.reorder("posts.views ASC")
 
     # artags_desc, copytags_desc, chartags_desc, gentags_desc, metatags_desc
     when /(#{TagCategory.short_name_list.join("|")})tags(?:\Z|_desc)/
