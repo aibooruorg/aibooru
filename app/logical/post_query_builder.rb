@@ -36,7 +36,7 @@ class PostQueryBuilder
     ordpool note comment commentary id rating source status filetype
     disapproved parent child search embedded md5 width height mpixels ratio views
     score upvotes downvotes favcount filesize date age order limit tagcount pixiv_id pixiv
-    unaliased exif duration random is has ai
+    unaliased exif duration random is has ai updater
   ] + COUNT_METATAGS + COUNT_METATAG_SYNONYMS + CATEGORY_COUNT_METATAGS
 
   ORDER_METATAGS = %w[
@@ -178,6 +178,8 @@ class PostQueryBuilder
       relation.user_subquery_matches(Comment.unscoped, value, current_user)
     when "commentaryupdater", "artcomm"
       relation.user_subquery_matches(ArtistCommentaryVersion.unscoped, value, current_user, field: :updater)
+    when "updater"
+      relation.user_subquery_matches(PostVersion.unscoped, value, current_user, field: :updater)
     when "noter"
       relation.user_subquery_matches(NoteVersion.unscoped.where(version: 1), value, current_user, field: :updater)
     when "noteupdater"
