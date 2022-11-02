@@ -120,6 +120,10 @@ class ExifTool
         metadata.has_key?("PNG:Dream")
     end
 
+    def prompt
+      metadata["PNG:Comment"] || metadata["PNG:Parameters"] || metadata["PNG:Description"]
+    end
+
     # @see http://www.vurdalakov.net/misc/gif/netscape-looping-application-extension
     # @see https://wiki.mozilla.org/APNG_Specification#.60acTL.60:_The_Animation_Control_Chunk
     # @see https://danbooru.donmai.us/posts?tags=-exif:GIF:AnimationIterations=Infinite+animated_gif

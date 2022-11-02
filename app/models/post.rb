@@ -90,7 +90,7 @@ class Post < ApplicationRecord
 
   has_many :versions, -> { Rails.env.test? ? order("post_versions.updated_at ASC, post_versions.id ASC") : order("post_versions.updated_at ASC") }, class_name: "PostVersion", dependent: :destroy
 
-  def self.new_from_upload(upload_media_asset, tag_string: nil, rating: nil, parent_id: nil, source: nil, artist_commentary_title: nil, artist_commentary_desc: nil, translated_commentary_title: nil, translated_commentary_desc: nil, is_pending: nil, add_artist_tag: false)
+  def self.new_from_upload(upload_media_asset, tag_string: nil, rating: nil, parent_id: nil, source: nil, artist_commentary_title: nil, artist_commentary_desc: nil, translated_commentary_title: nil, translated_commentary_desc: nil, is_pending: nil, prompt: nil, add_artist_tag: false)
     upload = upload_media_asset.upload
     media_asset = upload_media_asset.media_asset
 
@@ -119,6 +119,7 @@ class Post < ApplicationRecord
       rating: rating,
       parent_id: parent_id,
       is_pending: !upload.uploader.is_contributor? || is_pending.to_s.truthy?,
+      prompt: prompt || media_asset&.prompt,
       artist_commentary: (commentary if commentary.any_field_present?),
     )
   end
@@ -1165,6 +1166,8 @@ class Post < ApplicationRecord
           where(Note.active.where("notes.post_id = posts.id").arel.exists)
         when "pools"
           where(id: Pool.undeleted.select("unnest(post_ids)"))
+        when "prompt"
+          where("prompt is not null")
         else
           none
         end

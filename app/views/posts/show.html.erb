@@ -136,6 +136,7 @@
         <% end %>
 
         <li id="post-option-add-commentary"><%= link_to "Add commentary", "#", id: "add-commentary" %></li>
+        <li id="post-option-add-prompt"><%= link_to "Add prompt", "#", id: "add-prompt" %></li>
       <% end %>
 
       <% if policy(FavoriteGroup).create? %>
@@ -316,9 +317,32 @@
     <% end %>
   </section>
 
-  <% if @post.artist_commentary && @post.artist_commentary.any_field_present? %>
+  <% if @post.artist_commentary&.any_field_present? || @post.prompt.present? %>
     <div id="artist-commentary">
-      <%= render "artist_commentaries/show", :artist_commentary => @post.artist_commentary %>
+      <menu id="info-section-tabs">
+        <% if @post.artist_commentary&.any_field_present? && @post.prompt.present? %>
+          <li class="active"><a href="#commentary">Artist's commentary</a></li> |
+          <li><a href="#prompt">Prompt</a></li>
+        <% elsif @post.artist_commentary&.any_field_present? %>
+          <li><b>Artist's commentary</b></li>
+        <% elsif @post.prompt.present? %>
+          <li><b>Prompt</b></li>
+        <% end %>
+      </menu>
+
+      <% if @post.artist_commentary&.any_field_present? %>
+        <section id="artist-commentary-section">
+          <%= render "artist_commentaries/show", artist_commentary: @post.artist_commentary %>
+        </section>
+      <% end %>
+
+      <% if @post.prompt.present? %>
+        <%= tag.section id: "prompt-section", style: ("display:none" if @post.artist_commentary&.any_field_present?) do %>
+          <div id="prompt-text">
+            <%= @post.prompt %>
+          </div>
+        <% end %>
+      <% end %>
     </div>
   <% end %>
 
@@ -376,6 +400,14 @@
 <% if policy(ArtistCommentary).create_or_update? %>
   <div id="add-commentary-dialog" title="Add artist commentary" style="display: none;">
     <%= render "artist_commentaries/form", post: @post, artist_commentary: @post.artist_commentary || ArtistCommentary.new(post: @post) %>
+  </div>
+<% end %>
+
+<% if policy(@post).update? %>
+  <div id="add-prompt-dialog" title="Add prompt" style="display: none;">
+    <%= edit_form_for(@post, remote: true, method: :put, html: { id: "edit-prompt" }) do |f| %>
+      <%= f.input :prompt, as: :text, input_html: { value: @post.prompt } %>
+    <% end %>
   </div>
 <% end %>
 
