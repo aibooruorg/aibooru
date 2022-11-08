@@ -3,7 +3,7 @@
 set -xeuo pipefail
 
 RUBY_VERSION="${RUBY_VERSION:-3.1.2}"
-VIPS_VERSION="${VIPS_VERSION:-8.13.2}"
+VIPS_VERSION="${VIPS_VERSION:-8.13.3}"
 FFMPEG_VERSION="${FFMPEG_VERSION:-5.1.2}"
 MOZJPEG_VERSION="${MOZJPEG_VERSION:-4.1.1}"
 EXIFTOOL_VERSION="${EXIFTOOL_VERSION:-12.42}"
@@ -17,6 +17,7 @@ RUBY_BUILD_DEPS="libssl-dev zlib1g-dev libgmp-dev"
 FFMPEG_BUILD_DEPS="libvpx-dev libdav1d-dev nasm"
 MOZJPEG_BUILD_DEPS="cmake nasm libpng-dev zlib1g-dev"
 VIPS_BUILD_DEPS="
+  meson libgirepository1.0-dev
   libfftw3-dev libwebp-dev liborc-dev liblcms2-dev libpng-dev
   libexpat1-dev libglib2.0-dev libgif-dev libexif-dev libheif-dev
 "
@@ -66,6 +67,17 @@ install_vips() {
   CFLAGS="-O2" make -j "$(nproc)"
   make install
   ldconfig
+
+  #mkdir /usr/local/src/libvips
+  #cd /usr/local/src/libvips
+  #git clone https://github.com/libvips/libvips.git .
+  #git checkout $VIPS_VERSION
+
+  #meson build --prefix /usr/local --buildtype release
+  #cd build
+  #meson compile
+  #meson install
+  #ldconfig
 
   vips --version
 }

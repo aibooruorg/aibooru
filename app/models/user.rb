@@ -60,6 +60,9 @@ class User < ApplicationRecord
 
   DEFAULT_BLACKLIST = ["guro", "scat"].join("\n")
 
+  # Personal preferences that are editable by the user, rather than internal flags. These will be cleared when the user deactivates their account.
+  USER_PREFERENCE_BOOLEAN_ATTRIBUTES = ACTIVE_BOOLEAN_ATTRIBUTES - %w[is_banned requires_verification is_verified]
+
   attribute :id
   attribute :created_at
   attribute :updated_at
@@ -85,6 +88,7 @@ class User < ApplicationRecord
   attribute :theme, default: :auto
   attribute :upload_points, default: Danbooru.config.initial_upload_points.to_i
   attribute :bit_prefs, default: 0
+  attribute :is_deleted, default: false
 
   has_bit_flags BOOLEAN_ATTRIBUTES, :field => "bit_prefs"
   enum theme: { auto: 0, light: 50, dark: 100 }, _suffix: true
@@ -144,14 +148,12 @@ class User < ApplicationRecord
 
   accepts_nested_attributes_for :email_address, reject_if: :all_blank, allow_destroy: true
 
-  # UserDeletion#rename renames deleted users to `user_<1234>~`. Tildes
-  # are appended if the username is taken.
-  scope :deleted, -> { where("name ~ 'user_[0-9]+~*'") }
-  scope :undeleted, -> { where("name !~ 'user_[0-9]+~*'") }
   scope :admins, -> { where(level: Levels::ADMIN) }
   scope :banned, -> { bit_prefs_match(:is_banned, true) }
 
   scope :has_blacklisted_tag, ->(name) { where_regex(:blacklisted_tags, "(^| )[~-]?#{Regexp.escape(name)}( |$)", flags: "ni") }
+
+  deletable
 
   module BanMethods
     def unban!
@@ -210,16 +212,22 @@ class User < ApplicationRecord
       self.bcrypt_password_hash = BCrypt::Password.create(hash_password(new_password))
     end
 
+    # @return [User, Boolean] Return the user if the signed user ID is correct, or false if it isn't.
     def authenticate_login_key(signed_user_id)
+      return false if is_deleted?
       signed_user_id.present? && id == Danbooru::MessageVerifier.new(:login).verify(signed_user_id) && self
     end
 
+    # @return [Array<(User, ApiKey)>, Boolean] Return a (User, ApiKey) pair if the API key is correct, or false if it isn't.
     def authenticate_api_key(key)
+      return false if is_deleted?
       api_key = api_keys.find_by(key: key)
       api_key.present? && ActiveSupport::SecurityUtils.secure_compare(api_key.key, key) && [self, api_key]
     end
 
+    # @return [User, Boolean] Return the user if the password is correct, or false if it isn't.
     def authenticate_password(password)
+      return false if is_deleted?
       BCrypt::Password.new(bcrypt_password_hash) == hash_password(password) && self
     end
 
@@ -284,10 +292,6 @@ class User < ApplicationRecord
 
     def level_string(value = nil)
       User.level_string(value || level)
-    end
-
-    def is_deleted?
-      name.match?(/\Auser_[0-9]+~*\z/)
     end
 
     def is_anonymous?

@@ -130,7 +130,7 @@ class Post < ApplicationRecord
     end
 
     def file(type = :original)
-      media_asset.variant(type).open_file
+      media_asset.variant(type).open_file!
     end
 
     def tagged_file_url(tagged_filenames: !CurrentUser.user.disable_tagged_filenames?)
@@ -470,6 +470,10 @@ class Post < ApplicationRecord
       tags << "greyscale" if media_asset.is_greyscale?
       tags << "exif_rotation" if media_asset.is_rotated?
       tags << "non-repeating_animation" if media_asset.is_non_repeating_animation?
+
+      # Allow Flash files to be manually tagged as `sound`; other files are automatically tagged.
+      tags -= ["sound"] unless is_flash?
+      tags << "sound" if media_asset.has_sound?
 
       tags
     end
@@ -1134,7 +1138,7 @@ class Post < ApplicationRecord
         when *AutocompleteService::POST_STATUSES
           status_matches(value, current_user)
         when *MediaAsset::FILE_TYPES
-          attribute_matches(value, :file_ext, :enum)
+          attribute_matches(value, "media_assets.file_ext", :enum).joins(:media_asset)
         when *Post::RATINGS.values.map(&:downcase)
           rating_matches(value)
         when *Post::RATING_ALIASES.keys
@@ -1515,37 +1519,10 @@ class Post < ApplicationRecord
 
         ModAction.log("regenerated IQDB for post ##{id}", :post_regenerate_iqdb, subject: self, user: user)
       else
-        media_file = media_asset.variant(:original).open_file
-        media_asset.distribute_files!(media_file)
-
-        update!(
-          image_width: media_file.width,
-          image_height: media_file.height,
-          file_size: media_file.file_size,
-          file_ext: media_file.file_ext
-        )
-
-        media_asset.update!(
-          image_width: media_file.width,
-          image_height: media_file.height,
-          file_size: media_file.file_size,
-          file_ext: media_file.file_ext
-        )
-
-        purge_cached_urls!
-        update_iqdb
+        media_asset.regenerate!
 
         ModAction.log("regenerated image samples for post ##{id}", :post_regenerate, subject: self, user: user)
       end
-    end
-
-    def purge_cached_urls!
-      urls = [
-        preview_file_url, large_file_url, file_url,
-        tagged_file_url(tagged_filenames: true), tagged_large_file_url(tagged_filenames: true),
-      ]
-
-      CloudflareService.new.purge_cache(urls)
     end
   end
 

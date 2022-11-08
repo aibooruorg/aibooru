@@ -16,7 +16,7 @@ module Sources
       end
 
       should "get the image url" do
-        assert_equal(["https://skeb.imgix.net/uploads/origins/307941e9-dbe0-4e4b-93d4-94accdaff9a0?bg=%23fff&auto=format&w=800&s=e0ddfb1fa0d9f23797b338598aae78fa"], @site.image_urls)
+        assert_equal(["https://skeb.imgix.net/uploads/origins/307941e9-dbe0-4e4b-93d4-94accdaff9a0?bg=%23fff&auto=format&fm=webp&w=800&s=0c4bc4f0e5c231b39a81c2647988caa2"], @site.image_urls)
       end
 
       should "get the page url" do
@@ -69,7 +69,7 @@ module Sources
     context "A post with both the small and large version clean" do
       should "just get the bigger image" do
         site = Source::Extractor.find("https://skeb.jp/@goma_feet/works/1")
-        assert_equal(["https://skeb.imgix.net/uploads/origins/78ca23dc-a053-4ebe-894f-d5a06e228af8?bg=%23fff&auto=format&w=800&s=3de55b04236059113659f99fd6900d7d"], site.image_urls)
+        assert_equal(["https://skeb.imgix.net/uploads/origins/78ca23dc-a053-4ebe-894f-d5a06e228af8?bg=%23fff&auto=format&fm=webp&w=800&s=3a458a1e443dee3d73d45e88f0794f85"], site.image_urls)
       end
     end
 
@@ -77,8 +77,8 @@ module Sources
       should "get both correctly and in the right order" do
         site = Source::Extractor.find("https://skeb.jp/@LambOic029/works/146")
         image_urls = %w[
-          https://skeb.imgix.net/uploads/origins/3fc062c5-231d-400f-921f-22d77cde54df?bg=%23fff&auto=format&txtfont=bold&txtshad=70&txtclr=BFFFFFFF&txtalign=middle%2Ccenter&txtsize=150&txt=SAMPLE&w=800&s=80a1373b3f8e9bf0108d201fba34de71
-          https://skeb.imgix.net/uploads/origins/e888bb27-e1a6-48ec-a317-7615252ff818?bg=%23fff&auto=format&txtfont=bold&txtshad=70&txtclr=BFFFFFFF&txtalign=middle%2Ccenter&txtsize=150&txt=SAMPLE&w=800&s=9df9b46bbfad404d3a65c7c56b0cbf40
+          https://skeb.imgix.net/uploads/origins/3fc062c5-231d-400f-921f-22d77cde54df?bg=%23fff&auto=format&txtfont=bold&txtshad=70&txtclr=BFFFFFFF&txtalign=middle%2Ccenter&txtsize=150&txt=SAMPLE&fm=webp&w=800&s=7dbecbeb7b05394537b60c881a081776
+          https://skeb.imgix.net/uploads/origins/e888bb27-e1a6-48ec-a317-7615252ff818?bg=%23fff&auto=format&txtfont=bold&txtshad=70&txtclr=BFFFFFFF&txtalign=middle%2Ccenter&txtsize=150&txt=SAMPLE&fm=webp&w=800&s=64713510bc4a36b3422dff4b93e4ae87
         ]
 
         assert_equal(image_urls, site.image_urls)
@@ -105,6 +105,8 @@ module Sources
       assert(Source::URL.image_url?("https://skeb-production.s3.ap-northeast-1.amazonaws.com/uploads/outputs/20f9d68f-50ec-44ae-8630-173fc38a2d6a?response-content-disposition=attachment%3B%20filename%3D%22458093-1.output.mp4%22%3B%20filename%2A%3DUTF-8%27%27458093-1.output.mp4&response-content-type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIVPUTFQBBL7UDSUA%2F20220221%2Fap-northeast-1%2Fs3%2Faws4_request&X-Amz-Date=20220221T200057Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=7f028cfd9a56344cf1d42410063fad3ef30a1e47b83cef047247e0c37df01df0"))
       assert(Source::URL.page_url?("https://skeb.jp/@OrvMZ/works/3 "))
       assert(Source::URL.profile_url?("https://skeb.jp/@asanagi"))
+      assert(Source::URL.profile_url?("https://www.skeb.jp/@asanagi"))
+      assert(Source::URL.profile_url?("https://skeb.jp/asanagi"))
     end
   end
 end

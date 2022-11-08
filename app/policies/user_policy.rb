@@ -13,6 +13,14 @@ class UserPolicy < ApplicationPolicy
     record.id == user.id || user.is_admin?
   end
 
+  def deactivate?
+    (record.id == user.id && !user.is_anonymous?) || user.is_owner?
+  end
+
+  def destroy?
+    deactivate?
+  end
+
   def promote?
     user.is_moderator?
   end
@@ -45,7 +53,7 @@ class UserPolicy < ApplicationPolicy
   def api_attributes
     attributes = %i[
       id created_at name inviter_id level level_string
-      post_upload_count post_update_count note_update_count is_banned
+      post_upload_count post_update_count note_update_count is_banned is_deleted
     ]
 
     if record.id == user.id

@@ -10,22 +10,43 @@ class MediaFile
   extend Memoist
   include ActiveModel::Serializers::JSON
 
-  attr_accessor :file, :strict
+  attr_accessor :file
 
   # delegate all File methods to `file`.
   delegate *(File.instance_methods - MediaFile.instance_methods), to: :file
 
-  # Open a file or filename and return a MediaFile object.
+  # Open a file or filename and return a MediaFile object. If a block is given,
+  # pass the file to the block and return the result after closing the file.
   #
-  # @param file [File, String] a filename or an open File object
+  # @param file [File, MediaFile, String] A filename or an open File object.
   # @param options [Hash] extra options for the MediaFile subclass.
-  # @return [MediaFile] the media file
-  def self.open(file, **options)
-    return file.dup if file.is_a?(MediaFile)
+  # @yieldparam media_file [MediaFile] The opened media file.
+  # @return [MediaFile] The media file.
+  def self.open(file, **options, &block)
+    if file.is_a?(MediaFile)
+      media_file = file
+    else
+      file = Kernel.open(file, "r", binmode: true) unless file.respond_to?(:read)
+      media_file = new_from_file(file, **options)
+    end
 
-    file = Kernel.open(file, "r", binmode: true) unless file.respond_to?(:read)
+    if block_given?
+      result = yield media_file
+      media_file.close
+      result
+    else
+      media_file
+    end
+  end
 
-    case file_ext(file)
+  # Return a new MediaFile from an open File object.
+  #
+  # @param file [File] The File object.
+  # @param file_ext [Symbol] The file extension.
+  # @param options [Hash] Extra options for the MediaFile subclass.
+  # @return [MediaFile] The media file.
+  def self.new_from_file(file, file_ext = MediaFile.file_ext(file), **options)
+    case file_ext
     when :jpg, :gif, :png, :webp, :avif
       MediaFile::Image.new(file, **options)
     when :swf
@@ -101,11 +122,8 @@ class MediaFile
   # Initialize a MediaFile from a regular File.
   #
   # @param file [File] The image file.
-  # @param strict [Boolean] If true, raise errors if the file is corrupt. If false,
-  #   try to process corrupt files without raising any errors.
-  def initialize(file, strict: true, **options)
+  def initialize(file, **options)
     @file = file
-    @strict = strict
   end
 
   # @return [Array<(Integer, Integer)>] the width and height of the file
@@ -143,8 +161,20 @@ class MediaFile
     file.size
   end
 
+  # @return [ExifTool::Metadata] The metadata for the file. Subclasses may override this to add
+  #   extra non-ExifTool metadata, such as error messages, Ugoira frame delays, or ffprobe metadata.
+  #   This metadata may be slower to calculate than the raw `exif_metadata`.
   def metadata
+    exif_metadata
+  end
+
+  # @return [ExifTool::Metadata] The metadata for the file, as returned by ExifTool.
+  def exif_metadata
     ExifTool.new(file).metadata
+  end
+
+  def mime_type
+    Mime::Type.lookup_by_extension(file_ext)
   end
 
   # @return [Boolean] True if the file is supported by Danbooru. Certain files may be unsupported because they use features we don't support.
@@ -182,9 +212,14 @@ class MediaFile
     file_ext == :swf
   end
 
-  # @return [Boolean] true if the file is corrupted in some way
+  # @return [Boolean] True if the file is too corrupted to read or generate thumbnails without error.
   def is_corrupt?
-    false
+    error.present?
+  end
+
+  # @return [String, nil] The error message when reading the file, or nil if there are no errors.
+  def error
+    nil
   end
 
   # @return [Boolean] true if the file is animated. Note that GIFs and PNGs may be animated.
@@ -251,8 +286,9 @@ class MediaFile
       path: path,
       width: width,
       height: height,
-      file_ext: file_ext,
       file_size: file_size,
+      file_ext: file_ext,
+      mime_type: mime_type.to_s,
       md5: md5,
       is_corrupt?: is_corrupt?,
       is_supported?: is_supported?,
@@ -276,5 +312,5 @@ class MediaFile
     end
   end
 
-  memoize :file_ext, :file_size, :md5, :metadata
+  memoize :file_ext, :file_size, :md5, :mime_type, :exif_metadata
 end

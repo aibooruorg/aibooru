@@ -22,7 +22,7 @@ class MediaAsset < ApplicationRecord
   has_many :ai_tags
 
   delegate :frame_delays, :metadata, to: :media_metadata
-  delegate :is_non_repeating_animation?, :is_greyscale?, :is_rotated?, :is_ai_generated?, :prompt, to: :metadata
+  delegate :is_non_repeating_animation?, :is_greyscale?, :is_rotated?, :is_ai_generated?, :has_sound?, :prompt, to: :metadata
 
   scope :public_only, -> { where(is_public: true) }
   scope :private_only, -> { where(is_public: false) }
@@ -45,6 +45,9 @@ class MediaAsset < ApplicationRecord
   validates :md5, uniqueness: { conditions: -> { where(status: [:processing, :active]) } }, if: :md5_changed?
   validates :file_ext, inclusion: { in: FILE_TYPES, message: "File is not an image or video" }
   validates :file_key, length: { is: FILE_KEY_LENGTH }, uniqueness: true, if: :file_key_changed?
+  validates :file_size, comparison: { greater_than: 0 }, if: :file_size_changed?
+  validates :image_width, comparison: { greater_than: 0 }, if: :image_width_changed?
+  validates :image_height, comparison: { greater_than: 0 }, if: :image_height_changed?
 
   before_create :initialize_file_key
 
@@ -77,10 +80,16 @@ class MediaAsset < ApplicationRecord
       backup_storage_service.delete(file_path)
     end
 
-    def open_file
+    def open_file(&block)
+      open_file!(&block)
+    rescue
+      nil
+    end
+
+    def open_file!(&block)
       file = storage_service.open(file_path)
       frame_delays = media_asset.frame_delays if media_asset.is_ugoira?
-      MediaFile.open(file, frame_delays: frame_delays, strict: false)
+      MediaFile.open(file, frame_delays: frame_delays, &block)
     end
 
     def convert_file(media_file)
@@ -295,6 +304,11 @@ class MediaAsset < ApplicationRecord
       end
     end
 
+    # @return [Mime::Type] The file's MIME type.
+    def mime_type
+      Mime::Type.lookup_by_extension(file_ext)
+    end
+
     def file=(file_or_path)
       media_file = file_or_path.is_a?(MediaFile) ? file_or_path : MediaFile.open(file_or_path)
 
@@ -306,10 +320,58 @@ class MediaAsset < ApplicationRecord
       self.duration = media_file.duration
     end
 
-    def regenerate_ai_tags!
+    def regenerate!(metadata: true, files: true, ai_tags: true)
       with_lock do
-        ai_tags.each(&:destroy!)
-        update!(ai_tags: variant(:"360x360").open_file.ai_tags)
+        variant("original").open_file! do |original_file|
+          regenerate_metadata!(original_file) if metadata
+          regenerate_files!(original_file) if files
+        end
+
+        regenerate_ai_tags! if ai_tags
+      end
+    end
+
+    # Regenerate all metadata for the asset, including the md5, width, height, file size, file ext,
+    # duration, and EXIF metadata, both on the media asset and on the post. This may change the tags
+    # as well if the new metadata causes automatic tags to be recalculated.
+    def regenerate_metadata!(original_file)
+      update!(file: original_file)
+      media_metadata.update!(file: original_file)
+
+      if saved_changes? && post.present?
+        CurrentUser.scoped(User.system) do
+          post.update!(md5: md5, file_ext: file_ext, file_size: file_size, image_width: image_width, image_height: image_height)
+        end
+      end
+    end
+
+    # Regenerate all thumbnail and sample image files for the asset.
+    def regenerate_files!(original_file)
+      distribute_files!(original_file)
+      purge_cached_urls!
+      post.update_iqdb if post.present?
+    end
+
+    # Purge all image URLs from Cloudflare.
+    def purge_cached_urls!
+      urls = variants.map(&:file_url)
+      urls += [post.tagged_file_url(tagged_filenames: true), post.tagged_large_file_url(tagged_filenames: true)] if post.present?
+
+      CloudflareService.new.purge_cache(urls.uniq)
+    end
+
+    # Regenerate the AI tags for the asset. This is based on the 360x360 thumbnail, so the files
+    # should be regenerated first in case the thumbnail changed.
+    def regenerate_ai_tags!
+      ai_tags.each(&:destroy!)
+      update!(ai_tags: generate_ai_tags)
+    end
+
+    def generate_ai_tags
+      return [] if !has_variant?("360x360")
+
+      variant("360x360").open_file! do |media_file|
+        media_file.ai_tags
       end
     end
 

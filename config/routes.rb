@@ -50,7 +50,6 @@ Rails.application.routes.draw do
     namespace :user do
       resource :count_fixes, only: [:new, :create]
       resource :email_notification, only: [:show, :create, :destroy]
-      resource :deletion, :only => [:show, :destroy]
     end
   end
 
@@ -147,7 +146,9 @@ Rails.application.routes.draw do
       get :check, to: redirect {|path_params, req| "/iqdb_queries?#{req.query_string}"}
     end
   end
-  resources :media_assets, only: [:index, :show]
+  resources :media_assets, only: [:index, :show] do
+    get "/:variant", to: "media_assets#image", as: :image
+  end
   resources :media_metadata, only: [:index]
 
   resources :ai_tags, only: [:index]
@@ -272,6 +273,8 @@ Rails.application.routes.draw do
 
     get :change_name, on: :member, to: "user_name_change_requests#new"
     get :custom_style, on: :collection
+    get :deactivate, on: :member     # /users/:id/deactivate
+    get :deactivate, on: :collection # /users/deactivate
   end
   resources :user_events, only: [:index]
   resources :user_feedbacks, except: [:destroy]
@@ -344,6 +347,7 @@ Rails.application.routes.draw do
   get "/static/terms_of_service", to: redirect("/terms_of_service")
   get "/static/contact", to: redirect("/contact")
   get "/delayed_jobs", to: redirect("/jobs")
+  get "/maintenance/user/deletion", to: redirect("/users/deactivate")
 
   get "/mock/recommender/recommend/:user_id" => "mock_services#recommender_recommend", as: "mock_recommender_recommend"
   get "/mock/recommender/similiar/:post_id" => "mock_services#recommender_similar", as: "mock_recommender_similar"

@@ -10,6 +10,8 @@ class MediaFile::Image < MediaFile
   def dimensions
     image.size
   rescue Vips::Error
+    [metadata.width, metadata.height]
+  rescue
     [0, 0]
   end
 
@@ -26,10 +28,22 @@ class MediaFile::Image < MediaFile
   end
 
   def is_corrupt?
+    error.present?
+  end
+
+  def error
+    image = Vips::Image.new_from_file(file.path, fail: true)
     image.stats
-    false
-  rescue Vips::Error
-    true
+    nil
+  rescue Vips::Error => e
+    # XXX Vips has a single global error buffer that is shared between threads and that isn't cleared between operations.
+    # We can't reliably use `e.message` here because it may pick up errors from other threads, or from previous
+    # operations in the same thread.
+    "libvips error"
+  end
+
+  def metadata
+    super.merge({ "Vips:Error" => error }.compact_blank)
   end
 
   def duration
@@ -40,14 +54,21 @@ class MediaFile::Image < MediaFile
   def frame_count
     case file_ext
     when :gif, :webp
-      image.get("n-pages") if image.get_fields.include?("n-pages")
+      n_pages
     when :png
-      metadata.fetch("PNG:AnimationFrames", 1)
+      exif_metadata.fetch("PNG:AnimationFrames", 1)
     when :avif
       video.frame_count
     else
       nil
     end
+  end
+
+  # @return [Integer, nil] The frame count for gif and webp images, or possibly nil if the file doesn't have a frame count or is corrupt.
+  def n_pages
+    image.get("n-pages")
+  rescue Vips::Error
+    nil
   end
 
   def frame_rate
@@ -111,7 +132,7 @@ class MediaFile::Image < MediaFile
 
   def preview_frame
     if is_animated?
-      FFmpeg.new(file).smart_video_preview
+      FFmpeg.new(self).smart_video_preview
     else
       self
     end
@@ -147,12 +168,12 @@ class MediaFile::Image < MediaFile
 
   # @return [Vips::Image] the Vips image object for the file
   def image
-    Vips::Image.new_from_file(file.path, fail: strict).autorot
+    Vips::Image.new_from_file(file.path, fail: false).autorot
   end
 
   def video
-    FFmpeg.new(file)
+    FFmpeg.new(self)
   end
 
-  memoize :image, :video, :dimensions, :is_corrupt?, :is_animated_gif?, :is_animated_png?
+  memoize :image, :video, :preview_frame, :dimensions, :error, :metadata, :is_corrupt?, :is_animated_gif?, :is_animated_png?
 end

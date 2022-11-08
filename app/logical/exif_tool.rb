@@ -9,8 +9,8 @@ class ExifTool
   # @see https://exiftool.org/exiftool_pod.html#OPTIONS
   DEFAULT_OPTIONS = %q(
     -G1 -duplicates -unknown -struct --binary
-    -x 'System:*' -x ExifToolVersion -x FileType -x FileTypeExtension
-    -x MIMEType -x ImageWidth -x ImageHeight -x ImageSize -x MegaPixels
+    -x 'System:*' -x ExifToolVersion -x FileTypeExtension
+    -x MIMEType -x ImageSize -x MegaPixels
   ).squish
 
   attr_reader :file
@@ -45,6 +45,10 @@ class ExifTool
     # @param [Hash] a hash of metadata as returned by ExifTool
     def initialize(metadata)
       @metadata = metadata
+    end
+
+    def merge(hash)
+      Metadata.new(metadata.merge(hash))
     end
 
     def is_animated?
@@ -122,6 +126,19 @@ class ExifTool
 
     def prompt
       metadata["PNG:Comment"] || metadata["PNG:Parameters"] || metadata["PNG:Description"]
+    end
+
+    # True if the video has audible sound. False if the video doesn't have an audio track, or the audio track is inaudible.
+    def has_sound?
+      metadata["FFmpeg:AudioPeakLoudness"].to_f >= 0.0003 # -70 dB
+    end
+
+    def width
+      metadata.find { |name, value| name.match?(/\A(File|PNG|GIF|RIFF|Flash|Track\d+):ImageWidth\z/) }&.second
+    end
+
+    def height
+      metadata.find { |name, value| name.match?(/\A(File|PNG|GIF|RIFF|Flash|Track\d+):ImageHeight\z/) }&.second
     end
 
     # @see http://www.vurdalakov.net/misc/gif/netscape-looping-application-extension

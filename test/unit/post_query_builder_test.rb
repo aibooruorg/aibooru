@@ -315,6 +315,23 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
       assert_tag_match([post2, post1], "ordfav:#{CurrentUser.user.name} -has:comments")
     end
 
+    should "allow the ordfav:<name> metatag to be combined with other metatags" do
+      post1 = create(:post, tag_string: "fav:#{CurrentUser.user.name}", media_asset: build(:media_asset, image_width: 800, image_height: 600, file_size: 1234, file_ext: "jpg"))
+      post2 = create(:post, tag_string: "fav:#{CurrentUser.user.name}", media_asset: build(:media_asset, image_width: 1920, image_height: 1080, file_size: 4567, file_ext: "png"))
+
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} ratio:4/3")
+      assert_tag_match([post1], "ratio:4/3 ordfav:#{CurrentUser.user.name}")
+
+      assert_tag_match([post2], "ordfav:#{CurrentUser.user.name} ratio:16/9")
+      assert_tag_match([post2], "ratio:16/9 ordfav:#{CurrentUser.user.name}")
+
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} width:800")
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} height:600")
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} mpixels:0.48")
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} filesize:1234")
+      assert_tag_match([post1], "ordfav:#{CurrentUser.user.name} filetype:jpg")
+    end
+
     should "return posts for the pool:<name> metatag" do
       SqsService.any_instance.stubs(:send_message)
 
@@ -781,6 +798,11 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
       assert_tag_match([post], "duration:>0.4")
       assert_tag_match([post], "duration:<0.5")
       assert_tag_match([], "duration:>1")
+
+      assert_tag_match([post], "-duration:>0.5")
+      assert_tag_match([post], "-duration:<0.4")
+      assert_tag_match([], "-duration:<0.5")
+      assert_tag_match([], "-duration:>0.4")
     end
 
     should "return posts for the is:<status> metatag" do
@@ -818,13 +840,13 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
     end
 
     should "return posts for the is:<filetype> metatag" do
-      jpg = create(:post, file_ext: "jpg")
-      png = create(:post, file_ext: "png")
-      gif = create(:post, file_ext: "gif")
-      mp4 = create(:post, file_ext: "mp4")
-      webm = create(:post, file_ext: "webm")
-      swf = create(:post, file_ext: "swf")
-      zip = create(:post, file_ext: "zip")
+      jpg = create(:post, file_ext: "jpg", media_asset: build(:media_asset, file_ext: "jpg"))
+      png = create(:post, file_ext: "png", media_asset: build(:media_asset, file_ext: "png"))
+      gif = create(:post, file_ext: "gif", media_asset: build(:media_asset, file_ext: "gif"))
+      mp4 = create(:post, file_ext: "mp4", media_asset: build(:media_asset, file_ext: "mp4"))
+      webm = create(:post, file_ext: "webm", media_asset: build(:media_asset, file_ext: "webm"))
+      swf = create(:post, file_ext: "swf", media_asset: build(:media_asset, file_ext: "swf"))
+      zip = create(:post, file_ext: "zip", media_asset: build(:media_asset, file_ext: "zip"))
 
       assert_tag_match([jpg], "is:jpg")
       assert_tag_match([png], "is:png")
@@ -932,8 +954,8 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
     end
 
     should "return posts for the filetype:<ext> metatag" do
-      png = create(:post, file_ext: "png")
-      jpg = create(:post, file_ext: "jpg")
+      png = create(:post, file_ext: "png", media_asset: build(:media_asset, file_ext: "png"))
+      jpg = create(:post, file_ext: "jpg", media_asset: build(:media_asset, file_ext: "jpg"))
 
       assert_tag_match([png], "filetype:png")
       assert_tag_match([jpg], "-filetype:png")
@@ -1270,7 +1292,8 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
           # posts[0] is portrait, posts[1] is landscape. posts[1].mpixels > posts[0].mpixels.
           image_height: 100 * n * n,
           image_width: 100 * (3 - n) * n,
-          tag_string: tags[n - 1]
+          tag_string: tags[n - 1],
+          media_asset: build(:media_asset, image_height: 100 * n * n, image_width: 100 * (3 - n) * n, file_size: 1.megabyte * n)
         )
 
         u = create(:user, created_at: 2.weeks.ago)
@@ -1373,7 +1396,7 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
     end
 
     should "return posts for a filesize search" do
-      post = create(:post, file_size: 1.megabyte)
+      post = create(:post, file_size: 1.megabyte, media_asset: build(:media_asset, file_size: 1.megabyte))
 
       assert_tag_match([post], "filesize:1mb")
       assert_tag_match([post], "filesize:1000kb")
@@ -1481,14 +1504,14 @@ class PostQueryBuilderTest < ActiveSupport::TestCase
       assert_tag_match([post2, post1], "id:#{post1.id} or rating:q")
     end
 
-    should "work on a relation with pre-existing scopes" do
-      post1 = create(:post, rating: "g", is_pending: true, tag_string: ["1girl"])
-      post2 = create(:post, rating: "s", is_flagged: true, tag_string: ["1boy"])
+    should "work on a relation with pre-existing filters" do
+      post1 = create(:post, rating: "g", is_pending: true, tag_string: "1girl")
+      post2 = create(:post, rating: "s", is_flagged: true, tag_string: "1boy")
       create(:post_disapproval, post: post2, reason: "poor_quality")
 
       assert_tag_match([post1], "1girl", relation: Post.pending)
       assert_tag_match([post1], "1girl", relation: Post.in_modqueue)
-      assert_tag_match([post1], "1boy", relation: Post.in_modqueue)
+      assert_tag_match([post2], "1boy", relation: Post.in_modqueue)
       assert_tag_match([post2, post1], "comments:0", relation: Post.in_modqueue)
       assert_tag_match([post2, post1], "comments:0 notes:0", relation: Post.in_modqueue)
 
