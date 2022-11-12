@@ -112,7 +112,8 @@ class ApplicationController < ActionController::Base
   end
 
   def rescue_exception(exception)
-    Sentry.capture_exception(exception)
+    Sentry.capture_exception(exception) unless exception.is_a?(Pundit::NotAuthorizedError)
+
     case exception
     when ActionView::Template::Error
       rescue_exception(exception.cause)
