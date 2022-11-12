@@ -35,7 +35,7 @@ class Post < ApplicationRecord
   validates :md5, uniqueness: { message: ->(post, _data) { "Duplicate of post ##{Post.find_by_md5(post.md5).id}" }}, on: :create
   validates :rating, presence: { message: "not selected" }
   validates :rating, inclusion: { in: RATINGS.keys, message: "must be #{RATINGS.keys.map(&:upcase).to_sentence(last_word_connector: ", or ")}" }, if: -> { rating.present? }
-  validates :source, length: { maximum: 1200 }
+  validates :source, presence: true, length: { maximum: 1200 }
   validate :post_is_not_its_own_parent
   validate :uploader_is_not_limited, on: :create
   before_save :parse_pixiv_id
