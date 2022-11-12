@@ -127,9 +127,14 @@ class ApplicationController < ActionController::Base
     when ActionController::InvalidAuthenticityToken, ActionController::UnpermittedParameters, ActionController::InvalidCrossOriginRequest, ActionController::Redirecting::UnsafeRedirectError
       render_error_page(403, exception, message: exception.message)
     when ActiveSupport::MessageVerifier::InvalidSignature, # raised by `find_signed!`
-         User::PrivilegeError,
-         Pundit::NotAuthorizedError
+         User::PrivilegeError
       render_error_page(403, exception, template: "static/access_denied", message: "Access denied")
+    when Pundit::NotAuthorizedError
+      if CurrentUser.is_anonymous?
+        redirect_to login_path(url: request.fullpath)
+      else
+        render_error_page(403, exception, template: "static/access_denied", message: "Access denied")
+      end
     when ActiveRecord::RecordNotFound
       render_error_page(404, exception, message: "That record was not found.")
     when ActionController::RoutingError
