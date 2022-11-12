@@ -125,7 +125,7 @@ class ExifTool
     end
 
     def prompt
-      metadata["PNG:Comment"] || metadata["PNG:Parameters"] || metadata["PNG:Description"]
+      metadata["PNG:Description"] || metadata["PNG:Parameters"] || metadata["PNG:Comment"]
     end
 
     # True if the video has audible sound. False if the video doesn't have an audio track, or the audio track is inaudible.
