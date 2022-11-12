@@ -56,6 +56,8 @@ module Source
       Source::Extractor::Anifty,
       Source::Extractor::Furaffinity,
       Source::Extractor::Reddit,
+      Source::Extractor::Bilibili,
+      Source::Extractor::Rule34DotUs,
     ]
 
     # Should return true if the extractor is configured correctly. Return false
