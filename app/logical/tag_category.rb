@@ -20,8 +20,7 @@ module TagCategory
       "character" => 4,
       "copyright" => 3,
       "artist" => 1,
-      "mod" => 6,
-      "ai_model" => 6,
+      "model" => 6,
     }
   end
 
@@ -29,7 +28,7 @@ module TagCategory
   def canonical_mapping
     {
       "Artist"    => 1,
-      "AI Model"  => 6,
+      "Model"     => 6,
       "Copyright" => 3,
       "Character" => 4,
       "General"   => 0,
@@ -45,7 +44,7 @@ module TagCategory
       3 => "copyright",
       1 => "artist",
       5 => "meta",
-      6 => "ai_model",
+      6 => "model",
     }
   end
 
@@ -56,7 +55,7 @@ module TagCategory
       "char" => "character",
       "gen"  => "general",
       "meta" => "meta",
-      "mod"  => "ai_model",
+      "mod"  => "model",
     }
   end
 
@@ -68,11 +67,13 @@ module TagCategory
       "copyright" => "Copyrights",
       "artist" => "Artists",
       "meta" => nil,
-      "ai_model" => nil,
+      "model" => nil,
     }
   end
 
   def categories
+    # XXX We use ai_model instead of model here as it defines a scope on Tag which
+    # conflicts with ActiveRecord::Relation#model.
     %w[general character copyright artist meta ai_model]
   end
 
@@ -81,17 +82,17 @@ module TagCategory
   end
 
   def short_name_list
-    %w[art copy char gen meta mod]
+    %w[art copy char gen meta model]
   end
 
   # The order of tags on the post page tag list.
   def split_header_list
-    %w[artist ai_model copyright character general meta]
+    %w[artist model copyright character general meta]
   end
 
   # The order of tags inside the tag edit box, and on the comments page.
   def categorized_list
-    %w[artist ai_model copyright character meta general]
+    %w[artist model copyright character meta general]
   end
 
   # The order of tags in the related tag buttons.
