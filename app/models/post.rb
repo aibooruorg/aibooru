@@ -55,6 +55,7 @@ class Post < ApplicationRecord
   belongs_to :approver, class_name: "User", optional: true
   belongs_to :uploader, :class_name => "User", :counter_cache => "post_upload_count"
   belongs_to :parent, class_name: "Post", optional: true
+  has_one :ai_metadata
   has_one :media_asset, -> { active }, foreign_key: :md5, primary_key: :md5
   has_one :media_metadata, through: :media_asset
   has_one :artist_commentary, :dependent => :destroy
@@ -90,7 +91,26 @@ class Post < ApplicationRecord
 
   has_many :versions, -> { Rails.env.test? ? order("post_versions.updated_at ASC, post_versions.id ASC") : order("post_versions.updated_at ASC") }, class_name: "PostVersion", dependent: :destroy
 
-  def self.new_from_upload(upload_media_asset, tag_string: nil, rating: nil, parent_id: nil, source: nil, artist_commentary_title: nil, artist_commentary_desc: nil, translated_commentary_title: nil, translated_commentary_desc: nil, is_pending: nil, prompt: nil, add_artist_tag: false)
+  def self.new_from_upload(
+    upload_media_asset,
+    tag_string: nil,
+    rating: nil,
+    parent_id: nil,
+    source: nil,
+    artist_commentary_title: nil,
+    artist_commentary_desc: nil,
+    translated_commentary_title: nil,
+    translated_commentary_desc: nil,
+    prompt: nil,
+    negative_prompt: nil,
+    sampler: nil,
+    seed: nil,
+    steps: nil,
+    cfg_scale: nil,
+    model_hash: nil,
+    is_pending: nil,
+    add_artist_tag: false
+  )
     upload = upload_media_asset.upload
     media_asset = upload_media_asset.media_asset
 
@@ -101,6 +121,17 @@ class Post < ApplicationRecord
       translated_title: translated_commentary_title,
       translated_description: translated_commentary_desc,
     )
+
+    ai_metadata = AIMetadata.new_from_metadata(media_asset.metadata)
+    ai_metadata.assign_attributes({
+      prompt: prompt,
+      negative_prompt: negative_prompt,
+      sampler: sampler,
+      seed: seed,
+      steps: steps,
+      cfg_scale: cfg_scale,
+      model_hash: model_hash,
+    }.compact)
 
     if add_artist_tag
       tag_string = "#{tag_string} #{upload_media_asset.source_extractor&.artists.to_a.map(&:tag).map(&:name).join(" ")}".strip
@@ -119,8 +150,8 @@ class Post < ApplicationRecord
       rating: rating,
       parent_id: parent_id,
       is_pending: !upload.uploader.is_contributor? || is_pending.to_s.truthy?,
-      prompt: prompt || media_asset&.prompt,
       artist_commentary: (commentary if commentary.any_field_present?),
+      ai_metadata: (ai_metadata if ai_metadata.any_field_present?),
     )
   end
 
@@ -1172,8 +1203,12 @@ class Post < ApplicationRecord
           where(Note.active.where("notes.post_id = posts.id").arel.exists)
         when "pools"
           where(id: Pool.undeleted.select("unnest(post_ids)"))
+        when "metadata"
+          where(AIMetadata.where("ai_metadata.post_id = posts.id").arel.exists)
         when "prompt"
-          where("prompt is not null")
+          where(AIMetadata.where("ai_metadata.post_id = posts.id and prompt != ''").arel.exists)
+        when "seed"
+          where(AIMetadata.where("ai_metadata.post_id = posts.id and seed is not null").arel.exists)
         else
           none
         end
@@ -1671,6 +1706,12 @@ class Post < ApplicationRecord
     end
 
     save
+  end
+
+  def create_ai_metadata
+    metadata = AIMetadata.new_from_metadata(self.media_asset.metadata)
+    metadata.post = self
+    metadata
   end
 
   def self.model_restriction(table)

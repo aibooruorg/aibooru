@@ -37,7 +37,7 @@ Post.initialize_all = function() {
     this.initialize_recommended();
     this.initialize_ugoira_player();
     this.initialize_ruffle_player();
-    this.initialize_edit_prompt_dialog();
+    this.initialize_edit_ai_metadata_dialog();
     this.initialize_info_tabs();
   }
 
@@ -52,12 +52,12 @@ Post.initialize_all = function() {
 
 Post.initialize_info_tabs = function() {
   $("#info-section-tabs li a").on("click.danbooru", function(e) {
-    if (e.target.hash == "#commentary") {
+    if (e.target.hash === "#commentary") {
       $("#artist-commentary-section").show();
-      $("#prompt-section").hide();
-    } else if (e.target.hash == "#prompt") {
+      $("#ai-metadata-section").hide();
+    } else if (e.target.hash === "#ai-metadata") {
       $("#artist-commentary-section").hide();
-      $("#prompt-section").show();
+      $("#ai-metadata-section").show();
     }
 
     $("#info-section-tabs li").removeClass("active");
@@ -429,13 +429,13 @@ Post.initialize_ruffle_player = function() {
   }
 };
 
-Post.initialize_edit_prompt_dialog = function() {
-  $("#add-prompt-dialog").dialog({
+Post.initialize_edit_ai_metadata_dialog = function() {
+  $("#add-ai-metadata-dialog").dialog({
     autoOpen: false,
     width: 700,
     buttons: {
       "Submit": function() {
-        let form = $("#add-prompt-dialog #edit-prompt").get(0);
+        let form = $("#add-ai-metadata-dialog #edit-ai-metadata").get(0);
         Rails.fire(form, "submit");
         $(this).dialog("close");
       },
@@ -445,13 +445,13 @@ Post.initialize_edit_prompt_dialog = function() {
     }
   });
 
-  $("#add-prompt-dialog #edit-prompt").submit(() => {
+  $("#add-ai-metadata-dialog #edit-ai-metadata").submit(() => {
     $("#add-commentary-dialog").dialog("close");
   });
 
-  $("#add-prompt").on("click.danbooru", (e) => {
+  $("#add-ai-metadata").on("click.danbooru", (e) => {
     e.preventDefault();
-    $("#add-prompt-dialog").dialog("open");
+    $("#add-ai-metadata-dialog").dialog("open");
   });
 }
 
