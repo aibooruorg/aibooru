@@ -18,11 +18,12 @@ module Sources
         ],
         page_url: "https://t.bilibili.com/686082748803186697",
         artist_name: "哈米伦的弄笛者",
+        other_names: ["哈米伦的弄笛者"],
         tag_name: "bilibili_11742550",
         profile_url: "https://space.bilibili.com/11742550",
         tags: [],
         artist_commentary_title: nil,
-        dtext_artist_commentary_desc: "\"【崩坏3】少女，泳装，夏日时光！\":[https://www.bilibili.com/video/BV1fB4y1Y7zt]  新视频的图片分享！大家记得来康 http://i0.hdslb.com/bfs/emote/d8c665db9fdc69b3b90c71de3fe05536ac795409.png "
+        dtext_artist_commentary_desc: "\"【崩坏3】少女，泳装，夏日时光！\":[https://www.bilibili.com/video/BV1fB4y1Y7zt/]  新视频的图片分享！大家记得来康 http://i0.hdslb.com/bfs/emote/d8c665db9fdc69b3b90c71de3fe05536ac795409.png "
       )
     end
 
@@ -39,6 +40,7 @@ module Sources
         ],
         page_url: "https://t.bilibili.com/722702993036673113",
         artist_name: "星尘Official",
+        other_names: ["星尘Official"],
         tag_name: "bilibili_15817819",
         profile_url: "https://space.bilibili.com/15817819",
         tags: [],
@@ -76,6 +78,7 @@ module Sources
         ],
         artist_commentary_title: nil,
         artist_name: "明日方舟",
+        other_names: ["明日方舟"],
         profile_url: "https://space.bilibili.com/161775300",
         page_url: "https://h.bilibili.com/83341894",
         tag_name: "bilibili_161775300",
@@ -100,6 +103,7 @@ module Sources
         ],
         page_url: "https://www.bilibili.com/read/cv7360489",
         artist_name: "时光印记2016",
+        other_names: ["时光印记2016"],
         tag_name: "bilibili_285452636",
         profile_url: "https://space.bilibili.com/285452636",
         artist_commentary_title: "斗罗大陆 4，觉醒后的古月娜（第一期）",
@@ -113,8 +117,8 @@ module Sources
         "https://i0.hdslb.com/bfs/activity-plat/static/2cf2b9af5d3c5781d611d6e36f405144/E738vcDvd3.png",
         image_urls: ["https://i0.hdslb.com/bfs/activity-plat/static/2cf2b9af5d3c5781d611d6e36f405144/E738vcDvd3.png"],
         profile_url: "",
-        artist_id: "",
-        page_url: ""
+        artist_id: nil,
+        page_url: nil,
       )
     end
 

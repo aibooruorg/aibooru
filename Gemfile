@@ -61,6 +61,7 @@ gem "sentry-rails"
 gem "resolv"
 gem "rover-df"
 gem "ffi-libarchive"
+gem "pry-rails"
 
 group :development do
   gem 'rubocop', require: false

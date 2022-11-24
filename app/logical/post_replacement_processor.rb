@@ -27,7 +27,7 @@ class PostReplacementProcessor
     elsif Source::URL.page_url(image_url).present?
       canonical_url = image_url
     else
-      canonical_url = replacement.replacement_url
+      canonical_url = replacement.replacement_url.strip
     end
 
     replacement.replacement_url = canonical_url
@@ -53,6 +53,8 @@ class PostReplacementProcessor
   rescue Exception => exception
     replacement.errors.add(:base, exception.message)
     raise ActiveRecord::Rollback
+  ensure
+    media_file&.close
   end
 
   def rescale_notes(post)

@@ -90,6 +90,10 @@ module Source
         "bilibili_#{artist_id}"
       end
 
+      def other_names
+        [artist_name].compact
+      end
+
       def artist_id
         artist_id_from_data || parsed_url.artist_id || parsed_referer&.artist_id
       end
@@ -121,6 +125,10 @@ module Source
 
       def article_id
         parsed_url.article_id || parsed_referer&.article_id
+      end
+
+      def http
+        super.use(:spoof_referrer)
       end
 
       def page
