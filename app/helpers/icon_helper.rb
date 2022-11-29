@@ -125,6 +125,7 @@ module IconHelper
     Piczel
     Pillowfort
     Pinterest
+    Pixai
     Pixiv
     Pixiv\ Sketch
     Plurk
