@@ -55,7 +55,7 @@ module TagCategory
       "char" => "character",
       "gen"  => "general",
       "meta" => "meta",
-      "mod"  => "model",
+      "model"  => "model",
     }
   end
 
@@ -72,9 +72,7 @@ module TagCategory
   end
 
   def categories
-    # XXX We use ai_model instead of model here as it defines a scope on Tag which
-    # conflicts with ActiveRecord::Relation#model.
-    %w[general character copyright artist meta ai_model]
+    %w[general character copyright artist meta model]
   end
 
   def category_ids
