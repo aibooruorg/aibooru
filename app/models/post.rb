@@ -1635,7 +1635,12 @@ class Post < ApplicationRecord
     def discord_image(channel)
       return if rating != 'g' && !channel.nsfw?
       return if is_banned? || Danbooru.config.discord_censored_tags.any? { |tag| has_tag?(tag) } || !visible?(User.anonymous)
-      Discordrb::Webhooks::EmbedImage.new(url: large_file_url)
+      url = if large_file_url.start_with?("/") # XXX needed because we use relative URIs for images
+        "#{Danbooru.config.canonical_url}#{large_file_url}"
+      else
+        large_file_url
+      end
+      Discordrb::Webhooks::EmbedImage.new(url: url)
     end
 
     def discord_color
