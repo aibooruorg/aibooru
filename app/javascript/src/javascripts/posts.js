@@ -36,7 +36,6 @@ Post.initialize_all = function() {
     this.initialize_post_image_resize_links();
     this.initialize_recommended();
     this.initialize_ugoira_player();
-    this.initialize_ruffle_player();
     this.initialize_edit_ai_metadata_dialog();
     this.initialize_info_tabs();
   }
@@ -44,6 +43,8 @@ Post.initialize_all = function() {
   if ($("#c-posts #a-show, #c-uploads #a-show").length) {
     this.initialize_edit_dialog();
   }
+
+  this.initialize_ruffle_player();
 
   $(window).on('danbooru:initialize_saved_seraches', () => {
     Post.initialize_saved_searches();

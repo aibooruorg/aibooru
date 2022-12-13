@@ -445,6 +445,19 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
           assert_equal(5, upload.upload_media_assets.size)
           assert_equal("file://ugoira.zip/000000.jpg", upload.upload_media_assets[0].source_url)
         end
+
+        should "upload the files in filename order" do
+          upload = assert_successful_upload("test/files/archive/out-of-order.zip", user: @user)
+
+          assert_equal(6, upload.media_asset_count)
+          assert_equal(6, upload.upload_media_assets.size)
+          assert_equal("file://out-of-order.zip/9/9.gif", upload.upload_media_assets[0].source_url)
+          assert_equal("file://out-of-order.zip/9/10.gif", upload.upload_media_assets[1].source_url)
+          assert_equal("file://out-of-order.zip/9/11.gif", upload.upload_media_assets[2].source_url)
+          assert_equal("file://out-of-order.zip/10/9.gif", upload.upload_media_assets[3].source_url)
+          assert_equal("file://out-of-order.zip/10/10.gif", upload.upload_media_assets[4].source_url)
+          assert_equal("file://out-of-order.zip/10/11.gif", upload.upload_media_assets[5].source_url)
+        end
       end
 
       context "uploading a .rar file from your computer" do
@@ -536,8 +549,8 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         should_upload_successfully("https://nijie.info/view_popup.php?id=213043")
         should_upload_successfully("https://pic.nijie.net/07/nijie/17/95/728995/illust/0_0_403fdd541191110c_c25585.jpg")
 
-        should_upload_successfully("https://pawoo.net/web/statuses/1202176") if Danbooru.config.pawoo_client_id.present? # XXX
-        should_upload_successfully("https://img.pawoo.net/media_attachments/files/000/128/953/original/4c0a06087b03343f.png") if Danbooru.config.pawoo_client_id.present? # XXX
+        should_upload_successfully("https://pawoo.net/web/statuses/1202176") if Danbooru.config.pawoo_access_token.present? # XXX
+        should_upload_successfully("https://img.pawoo.net/media_attachments/files/000/128/953/original/4c0a06087b03343f.png") if Danbooru.config.pawoo_access_token.present? # XXX
 
         should_upload_successfully("https://baraag.net/@danbooru/107866090743238456")
         should_upload_successfully("https://baraag.net/system/media_attachments/files/107/866/084/749/942/932/original/a9e0f553e332f303.mp4")
@@ -590,6 +603,8 @@ class UploadsControllerTest < ActionDispatch::IntegrationTest
         should_upload_successfully("http://www.tinami.com/view/1087268")
 
         should_upload_successfully("https://booth.pximg.net/4ee2c0d9-41fa-4a0e-a30f-1bc9e15d4e5b/i/2586180/331b7c5f-7614-4772-aae2-cb979ad44a6b.png")
+
+        should_upload_successfully("https://picdig.net/apricot/projects/9d96c3f2-f92f-4472-856a-93779bb43527")
       end
     end
   end

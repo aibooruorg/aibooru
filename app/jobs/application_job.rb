@@ -11,6 +11,8 @@ class ApplicationJob < ActiveJob::Base
   class JobTimeoutError < StandardError; end
 
   queue_as :default
+
+  # Jobs with higher priority are processed first. Higher number = higher priority.
   queue_with_priority 0
 
   around_perform do |_job, block|
@@ -29,6 +31,6 @@ class ApplicationJob < ActiveJob::Base
 
   # A list of all available job types. Used by the /jobs search form.
   def self.job_classes
-    subclasses
+    subclasses.sort_by(&:name)
   end
 end

@@ -26,13 +26,14 @@ class UserNameValidator < ActiveModel::EachValidator
       rec.errors.add(attr, "must be more than 1 character long")
     elsif name.length >= 25
       rec.errors.add(attr, "must be less than 25 characters long")
-    elsif name =~ /[[:space:]]/
+    # \p{di} = default ignorable codepoints. Filters out Hangul filler characters (U+115F, U+1160, U+3164, U+FFA0)
+    elsif name =~ /[[:space:]\p{di}]/
       rec.errors.add(attr, "can't contain whitespace")
     elsif name =~ /\A[[:punct:]]/
       rec.errors.add(attr, "can't start with '#{name.first}'")
     elsif name =~ /[[:punct:]]\z/
       rec.errors.add(attr, "can't end with '#{name.last}'")
-    elsif name =~ /\.(html|json|xml|atom|rss|txt|js|css|csv|png|jpg|jpeg|gif|png|avif|webp|mp4|webm|zip|pdf|exe|sitemap)\z/i
+    elsif name =~ /\.(#{Mime::EXTENSION_LOOKUP.keys.join("|")})\z/i
       rec.errors.add(attr, "can't end with a file extension")
     elsif name =~ /__/
       rec.errors.add(attr, "can't contain multiple underscores in a row")

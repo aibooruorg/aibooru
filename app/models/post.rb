@@ -35,7 +35,7 @@ class Post < ApplicationRecord
   validates :md5, uniqueness: { message: ->(post, _data) { "Duplicate of post ##{Post.find_by_md5(post.md5).id}" }}, on: :create
   validates :rating, presence: { message: "not selected" }
   validates :rating, inclusion: { in: RATINGS.keys, message: "must be #{RATINGS.keys.map(&:upcase).to_sentence(last_word_connector: ", or ")}" }, if: -> { rating.present? }
-  validates :source, presence: true, length: { maximum: 1200 }
+  validates :source, visible_string: true, length: { maximum: 1200 }
   validate :post_is_not_its_own_parent
   validate :uploader_is_not_limited, on: :create
   before_save :parse_pixiv_id
@@ -197,18 +197,6 @@ class Post < ApplicationRecord
       media_asset.variant(:preview).file_url
     end
 
-    def open_graph_image_url
-      if is_image?
-        if has_large?
-          large_file_url
-        else
-          file_url
-        end
-      else
-        preview_file_url
-      end
-    end
-
     def file_url_for(user)
       if user.default_image_size == "large" && image_width > Danbooru.config.large_image_width
         tagged_large_file_url
@@ -239,10 +227,6 @@ class Post < ApplicationRecord
   end
 
   concerning :ImageMethods do
-    def twitter_card_supported?
-      image_width.to_i >= 280 && image_height.to_i >= 150
-    end
-
     def has_large?
       return false if has_tag?("animated_gif") || has_tag?("animated_png")
       return true if is_ugoira?
@@ -811,7 +795,7 @@ class Post < ApplicationRecord
           decrement_tag_post_counts
           remove_from_all_pools
           remove_from_fav_groups
-          media_asset.trash!
+          media_asset.trash!(current_user, log: false)
           destroy
           update_parent_on_destroy
         end
@@ -1398,17 +1382,7 @@ class Post < ApplicationRecord
       end
 
       def exif_matches(string)
-        # string = exif:File:ColorComponents=3
-        if string.include?("=")
-          key, value = string.split(/=/, 2)
-          hash = { key => value }
-          metadata = MediaMetadata.joins(:media_asset).where_json_contains(:metadata, hash)
-        # string = exif:File:ColorComponents
-        else
-          metadata = MediaMetadata.joins(:media_asset).where_json_has_key(:metadata, string)
-        end
-
-        where(md5: metadata.select(:md5))
+        where(md5: MediaAsset.exif_matches(string).select(:md5))
       end
 
       def ai_tags_include(value, default_confidence: ">=50")
