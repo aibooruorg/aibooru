@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/danbooru/danbooru:${{ github.sha }}
+      image: ghcr.io/aibooruorg/aibooru:${{ github.sha }}
       options: --user root
 
     env:
@@ -41,7 +41,6 @@ jobs:
 
       DATABASE_URL: postgresql://danbooru:danbooru@postgres/danbooru
       DANBOORU_SECRET_KEY_BASE: 1234
-      DANBOORU_AWS_SQS_ENABLED: false
       DANBOORU_TWITTER_API_KEY: ${{ secrets.DANBOORU_TWITTER_API_KEY }}
       DANBOORU_TWITTER_API_SECRET: ${{ secrets.DANBOORU_TWITTER_API_SECRET }}
       DANBOORU_PIXIV_PHPSESSID: ${{ secrets.DANBOORU_PIXIV_PHPSESSID }}
