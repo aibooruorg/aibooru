@@ -68,6 +68,7 @@ module Source
       Source::Extractor::Pixai,
       Source::Extractor::ArtStreet,
       Source::Extractor::Gumroad,
+      Source::Extractor::Misskey,
       Source::Extractor::Civitai,
     ]
 

@@ -72,6 +72,7 @@ module Source
       Source::URL::AboutMe,
       Source::URL::ArtStreet,
       Source::URL::Gumroad,
+      Source::URL::Misskey,
       Source::URL::Catbox,
       Source::URL::Civitai,
     ]
