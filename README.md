@@ -5,7 +5,7 @@
 Run this to start a basic Danbooru instance:
 
 ```sh
-curl -sSL https://raw.githubusercontent.com/danbooru/danbooru/master/bin/danbooru | sh
+curl -sSL https://raw.githubusercontent.com/aibooruorg/aibooru/master/bin/danbooru | sh
 ```
 
 This will install [Docker Compose](https://docs.docker.com/compose/) and use it
@@ -14,7 +14,7 @@ to start Danbooru. When it's done, Danbooru will be running at http://localhost:
 Alternatively, if you already have Docker Compose installed, you can just do:
 
 ```sh
-wget https://raw.githubusercontent.com/danbooru/danbooru/master/docker-compose.yaml
+wget https://raw.githubusercontent.com/aibooruorg/aibooru/master/docker-compose.yaml
 docker compose up
 ```
 
