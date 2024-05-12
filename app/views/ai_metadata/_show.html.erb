@@ -11,7 +11,13 @@
     <% ai_metadata.sorted_parameters.each do |name, value| %>
       <tr>
         <th><%= name %></th>
-        <td><%= value.presence || unknown_field %></td>
+        <td>
+          <% if name == "Model Hash" && value.present? %>
+            <%= link_to value, ai_models_path(search: { model_hash: value }) %>
+          <% else %>
+            <%= value.presence || unknown_field %>
+          <% end %>
+        </td>
       </tr>
     <% end %>
   </tbody>

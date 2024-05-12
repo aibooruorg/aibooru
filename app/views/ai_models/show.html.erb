@@ -1,0 +1,20 @@
+<div id="c-ai-models">
+  <div id="a-show">
+    <h1><%= @ai_model.name %></h1>
+
+    <h3>Model hash</h3> <%= @ai_model.model_hash %>
+    <%= link_to "»", ai_metadata_path(search: { parameter_name: "Model Hash", parameter_value: @ai_model.model_hash }) %>
+
+    <h3>SHA256 hash</h3> <%= @ai_model.sha_hash %>
+
+    <h3>Description</h3>
+    <%= @ai_model.dtext_description.format_text %>
+
+    <h3>Torrent download</h3>
+    <% if @ai_model.magnet_uri.present? %>
+      <%= tag.a "Download", href: @ai_model.magnet_uri %>
+    <% end %>
+  </div>
+</div>
+
+<% render "secondary_links" %>

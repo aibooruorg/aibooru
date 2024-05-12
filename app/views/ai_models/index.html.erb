@@ -1,0 +1,35 @@
+<div id="c-ai-models">
+  <div id="a-index">
+    <h1>AI Models</h1>
+
+    <%= embed_wiki("help:ai_model_notice") %>
+
+    <%= table_for @ai_models, class: "striped autofit" do |t| %>
+      <% t.column "Name" do |ai_model| %>
+        <%= link_to ai_model.name, ai_model %>
+      <% end %>
+
+      <% t.column "Model Hash" do |ai_model| %>
+        <%= ai_model.model_hash %>
+      <% end %>
+
+      <% t.column "SHA256" do |ai_model| %>
+        <%= ai_model.sha_hash %>
+      <% end %>
+
+      <% t.column "Magnet URI" do |ai_model| %>
+        <%= tag.a "Download", href: "magnet:#{ai_model.magnet_uri}" %>
+      <% end %>
+
+      <% t.column "Creator" do |ai_model| %>
+        <%= link_to_user ai_model.creator %>
+      <% end %>
+
+      <% t.column "Added" do |ai_model| %>
+        <%= time_ago_in_words_tagged(ai_model.created_at) %>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<% render "secondary_links" %>

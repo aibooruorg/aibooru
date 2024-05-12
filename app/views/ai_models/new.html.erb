@@ -1,0 +1,18 @@
+<div id="c-ai-models">
+  <div id="a-new">
+    <h1>New AI Model</h1>
+
+    <%= edit_form_for(@ai_model) do |f| %>
+      <%= f.input :name %>
+      <%= f.input :description, as: :dtext %>
+      <%= f.input :model_hash %>
+      <%= f.input :sha_hash, label: "SHA256 hash" %>
+      <%= f.input :magnet, label: "Magnet URI" %>
+
+      <%= f.button :submit, "Submit" %>
+      <%= dtext_preview_button :ai_model_description %>
+    <% end %>
+  </div>
+</div>
+
+<% render "secondary_links" %>

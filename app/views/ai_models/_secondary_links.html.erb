@@ -1,0 +1,15 @@
+<% content_for(:secondary_links) do %>
+  <%= quick_search_form_for(:name_or_hash_matches, ai_models_path, "models", autocomplete: "ai-model", redirect: true) %>
+  <%= subnav_link_to "Models", ai_models_path %>
+  <% if policy(AIModel).create? %>
+    <%= subnav_link_to "New", new_ai_model_path %>
+  <% end %>
+  <% if @ai_model.present? && policy(@ai_model).edit? && !@ai_model.new_record? %>
+    <%= subnav_link_to "Edit", edit_ai_model_path(@ai_model) %>
+  <% end %>
+  <% if @ai_model.present? && policy(@ai_model).destroy? && !@ai_model.new_record? %>
+    <%= subnav_link_to "Delete", ai_model_path(@ai_model), method: :delete %>
+  <% end %>
+  <% subnav_link_to "Changes", "ai_model_versions_path" %>
+  <%= subnav_link_to "Help", wiki_page_path("help:ai_models") %>
+<% end %>
