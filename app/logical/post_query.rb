@@ -20,7 +20,7 @@ class PostQuery
   SINGLETON_METATAGS = ORDER_METATAGS + %w[limit random]
 
   attr_reader :current_user
-  private attr_reader :tag_limit, :safe_mode, :builder
+  private attr_reader :tag_limit, :safe_mode, :builder, :show_deleted
 
   delegate :tag?, :metatag?, :wildcard?, :metatags, :wildcards, :tag_names, :to_infix, :to_pretty_string, to: :ast
   alias_method :safe_mode?, :safe_mode
@@ -47,7 +47,7 @@ class PostQuery
     post_query.with_implicit_metatags.posts
   end
 
-  def initialize(search_or_ast, current_user: User.anonymous, tag_limit: nil, safe_mode: false)
+  def initialize(search_or_ast, current_user: User.anonymous, tag_limit: nil, safe_mode: false, show_deleted: false)
     if search_or_ast.is_a?(AST)
       @ast = search_or_ast
     else
@@ -57,6 +57,7 @@ class PostQuery
     @current_user = current_user
     @tag_limit = tag_limit
     @safe_mode = safe_mode
+    @show_deleted = show_deleted
   end
 
   # Build a new PostQuery from the given AST and the current settings.
@@ -223,7 +224,7 @@ class PostQuery
   end
 
   def show_deleted?
-    current_user.show_deleted_posts? || has_status_metatag?
+    show_deleted || current_user.show_deleted_posts? || has_status_metatag?
   end
 
   def has_status_metatag?
@@ -237,7 +238,14 @@ class PostQuery
 
     # @return [Integer, nil] The number of posts returned by the search, or nil on timeout.
     def post_count
-      @post_count ||= fast_count
+      begin
+        old_show_deleted = @show_deleted
+        @show_deleted = true
+        @post_count ||= fast_count
+      ensure
+        @show_deleted = old_show_deleted
+      end
+      @post_count
     end
 
     # Return an estimate of the number of posts returned by the search. By default, we try to use an
